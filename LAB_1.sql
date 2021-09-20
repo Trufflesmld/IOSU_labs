@@ -116,6 +116,12 @@ MODIFY
     stufname varchar2(50);
 
 -------------------------------------------------------------------------------------- 
+/*Индексы*/
+CREATE INDEX key_of_team_in_buildings ON buildings(teamkey);
+CREATE INDEX key_of_typeObj_in_buildings ON buildings(typeObj);
+
+
+-------------------------------------------------------------------------------------------
 /*insert TEAMS*/
 BEGIN
 INSERT INTO
