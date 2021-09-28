@@ -59,7 +59,7 @@ SELECT
     stagename
 FROM
     stages
-UNION
+UNION 
 SELECT
     stufname
 FROM
