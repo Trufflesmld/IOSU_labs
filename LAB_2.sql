@@ -59,11 +59,26 @@ SELECT
     stagename
 FROM
     stages
-UNION 
+UNION
 SELECT
     stufname
 FROM
     stuf;
+
+/*чтото наваял*/
+SELECT
+    DISTINCT typeobj,
+    stagekey
+FROM
+    buildings
+    INNER JOIN S_S USING(buildkey)
+UNION
+SELECT
+    stufname,
+    stagekey
+FROM
+    stuf
+    INNER JOIN S_S USING(stufkey);
 
 /*«Количество построенных объектов по кварталам» (запрос по полю с типом дата)*/
 SELECT
