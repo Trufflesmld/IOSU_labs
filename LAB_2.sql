@@ -1,7 +1,7 @@
 SET
     linesize 500;
 
-/*«Текущие этапы работы» (условная выборка);*/
+/*«Текущие этапы работы» (условная выборка); +*/
 SELECT
     B_S.*,
     b.typeobj,
@@ -15,7 +15,7 @@ WHERE
     AND B_S.buildKey = b.buildKey;
 
 /*ИЛИ*/
-/*c внутренним соединением*/
+/*c внутренним соединением +*/
 SELECT
     buildKey,
     typeobj,
@@ -55,32 +55,38 @@ WHERE
     AND B_S.stagekey = & y_stagekey;
 
 /*«Общий список объектов и стройматериалов с указанием количества этапов» (запрос на объединение);*/
+/*Сколько всего было построено по типам и сколько стройматериалов всего было использовано*/
 SELECT
-    stagename
+    typeobj,
+    total
 FROM
-    stages
+    objectstypes
+    JOIN (
+        SELECT
+            typeobj,
+            count(typeobj) AS total
+        FROM
+            buildings
+        GROUP BY
+            typeobj
+    ) USING(typeobj)
 UNION
 SELECT
-    stufname
-FROM
-    stuf;
-
-/*чтото наваял*/
-SELECT
-    DISTINCT typeobj,
-    stagekey
-FROM
-    buildings
-    INNER JOIN S_S USING(buildkey)
-UNION
-SELECT
-    stufname,
-    stagekey
+    stufName,
+    all_needed
 FROM
     stuf
-    INNER JOIN S_S USING(stufkey);
+    JOIN(
+        SELECT
+            stufKey,
+            SUM(neededstuf) AS all_needed
+        FROM
+            S_S
+        GROUP BY
+            stufKey
+    ) USING(stufKey);
 
-/*«Количество построенных объектов по кварталам» (запрос по полю с типом дата)*/
+/*«Количество построенных объектов по кварталам» (запрос по полю с типом дата) +*/
 SELECT
     TO_CHAR(enddate, 'q') AS quarter,
     COUNT(buildKey) AS Finished_buildings
@@ -89,7 +95,7 @@ FROM
 GROUP BY
     TO_CHAR(enddate, 'q');
 
-/*Список заказчиков у которых объект "ТипN"  *IN* */
+/*Список заказчиков у которых объект "ТипN"  *IN* +*/
 SELECT
     *
 FROM
@@ -104,7 +110,7 @@ WHERE
             typeobj = 'Тип&typeobj'
     );
 
-/* Заказчик который сделал самый дорогой заказ  *ALL/ANY* */
+/* Запрос на любимого клиента!  *ALL/ANY* +*/
 SELECT
     c.*,
     b.contractPrice
@@ -120,7 +126,7 @@ WHERE
     )
     AND c.clientKey = b.clientKey;
 
-/* Список стройматериала который был задействован на объекте   *EXISTS/NOT EXISTS **/
+/* Список стройматериала который был задействован на объекте   *EXISTS/NOT EXISTS * +*/
 SELECT
     stufKey,
     stufName
@@ -129,7 +135,7 @@ FROM
 WHERE
     EXISTS (
         SELECT
-            *
+            1
         FROM
             S_S
         WHERE
@@ -137,10 +143,34 @@ WHERE
             AND buildkey = & buildkey
     );
 
-/*Сводная таблица Этап материал со стройматериалом и его колвом на складе*/
-/*Внешнее соединение*/
+/*Внешнее соединение +*/
 SELECT
     *
 FROM
-    S_S FULL
-    JOIN stuf USING(stufkey);
+    teams
+    LEFT JOIN buildings USING(teamkey);
+
+/*вывести бригадиров у которых общая стоимость выполненых объектов больше средней*/
+SELECT
+    lead,
+    total_money
+FROM
+    teams
+    JOIN (
+        SELECT
+            teamkey,
+            sum(contractprice) AS total_money
+        FROM
+            buildings
+        GROUP BY
+            teamkey
+        HAVING
+            sum(contractprice) >= (
+                SELECT
+                    avg(contractprice)
+                FROM
+                    buildings
+            )
+        ORDER BY
+            sum(contractprice) DESC
+    ) USING(teamkey);
