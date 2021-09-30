@@ -68,11 +68,24 @@ FROM
     JOIN clients USING (clientkey) WITH READ ONLY;
 
 /*Обновляемое представление*/
-CREATE VIEW clients_view AS
+CREATE
+OR REPLACE VIEW clients_view AS
 SELECT
     *
 FROM
-    clients;
-to_char(sysdate, 'd hh24')
-
-SELECT 2+2 from dual where to_char(sysdate, 'd');
+    clients
+WHERE
+    (
+        SELECT
+            to_char(sysdate, 'd')
+        FROM
+            dual
+    ) BETWEEN 2
+    AND 6
+    AND (
+        SELECT
+            to_char(sysdate, 'hh24')
+        FROM
+            dual
+    ) BETWEEN 9
+    AND 17;
