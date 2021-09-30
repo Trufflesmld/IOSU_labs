@@ -77,14 +77,14 @@ FROM
 WHERE
     (
         SELECT
-            to_char(sysdate, 'd')
+            to_number(to_char(sysdate, 'd'))
         FROM
             dual
     ) BETWEEN 2
     AND 6
     AND (
         SELECT
-            to_char(sysdate, 'hh24')
+            to_number(to_char(sysdate, 'hh24'))
         FROM
             dual
     ) BETWEEN 9
