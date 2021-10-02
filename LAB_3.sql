@@ -67,6 +67,55 @@ FROM
     JOIN teams USING (teamkey)
     JOIN clients USING (clientkey) WITH READ ONLY;
 
+CREATE
+OR REPLACE VIEW buildings_view AS
+SELECT
+    buildKey,
+    typeobj,
+    lead,
+    fname || ' ' || lname AS client_name,
+    contraktdate,
+    enddate,
+    CONTRACTPRICE
+FROM
+    buildings
+    JOIN teams USING (teamkey)
+    JOIN clients USING (clientkey);
+
+/*не работает*/
+UPDATE
+    buildings_view
+SET
+    lead = 'lol kek'
+WHERE
+    buildKey = 6;.
+
+/*не работает*/
+INSERT INTO
+    buildings_view (
+        typeObj,
+        lead,
+        client_name,
+        contraktDate,
+        endDate,
+        CONTRACTPRICE
+    )
+VALUES
+    (
+        'Тип1',
+        'lol',
+        'kek',
+        to_date('23.06.21', 'dd.mm.yy'),
+        to_date('15.08.21', 'dd.mm.yy'),
+        100.75
+    );
+
+/*не работает*/
+DELETE FROM
+    buildings_view
+WHERE
+    lead = 'Остапенко Игорь Николаевич';
+
 /*Обновляемое представление*/
 CREATE
 OR REPLACE VIEW clients_view AS
