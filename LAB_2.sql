@@ -93,7 +93,7 @@ SELECT
 FROM
     buildings
 GROUP BY
-    TO_CHAR(enddate, 'q');
+    TO_CHAR(enddate, 'q') AS quarter;
 
 /*Список заказчиков у которых объект "ТипN"  *IN* +*/
 SELECT
@@ -174,3 +174,12 @@ FROM
         ORDER BY
             sum(contractprice) DESC
     ) USING(teamkey);
+
+UPDATE
+    teams
+SET STRENGTH =
+    CASE
+        WHEN teamkey = 1 THEN 7
+        WHEN teamkey = 2 THEN 9
+    else STRENGTH
+    END;
