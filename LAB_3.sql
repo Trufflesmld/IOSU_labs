@@ -13,22 +13,6 @@ WHERE
             buildings
         WHERE
             typeobj = 'Тип2'
-    );
-
-CREATE
-OR REPLACE VIEW TEAMS_TYPE_2 AS
-SELECT
-    *
-FROM
-    teams
-WHERE
-    teamkey IN (
-        SELECT
-            teamkey
-        FROM
-            buildings
-        WHERE
-            typeobj = 'Тип2'
     ) WITH CHECK OPTION CONSTRAINT TYPE_2;
 
 /*не работает*/
@@ -66,21 +50,6 @@ FROM
     buildings
     JOIN teams USING (teamkey)
     JOIN clients USING (clientkey) WITH READ ONLY;
-
-CREATE
-OR REPLACE VIEW buildings_view AS
-SELECT
-    buildKey,
-    typeobj,
-    lead,
-    fname || ' ' || lname AS client_name,
-    contraktdate,
-    enddate,
-    CONTRACTPRICE
-FROM
-    buildings
-    JOIN teams USING (teamkey)
-    JOIN clients USING (clientkey);
 
 /*не работает*/
 UPDATE
