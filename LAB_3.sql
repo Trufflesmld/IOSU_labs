@@ -43,13 +43,12 @@ SELECT
     typeobj,
     lead,
     fname || ' ' || lname AS clent_name,
-    contraktdate,
     enddate,
     CONTRACTPRICE
 FROM
     buildings
     JOIN teams USING (teamkey)
-    JOIN clients USING (clientkey) WITH READ ONLY;
+    JOIN clients USING (clientkey);
 
 /*не работает*/
 UPDATE
@@ -57,8 +56,9 @@ UPDATE
 SET
     lead = 'lol kek'
 WHERE
-    buildKey = 6;.
+    buildKey = 6;
 
+.
 /*не работает*/
 INSERT INTO
     buildings_view (
@@ -106,4 +106,4 @@ WHERE
         FROM
             dual
     ) BETWEEN 9
-    AND 17;
+    AND 16 WITH CHECK OPTION;
