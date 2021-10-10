@@ -1,5 +1,6 @@
 /*Серверный вывод результатов*/
-SET SERVEROUTPUT ON;
+SET
+    SERVEROUTPUT ON;
 
 CREATE TABLE buildings_vspomog(
     buildKey NUMBER,
@@ -8,7 +9,7 @@ CREATE TABLE buildings_vspomog(
     teamKey INTEGER NOT NULL,
     contraktDate DATE NOT NULL,
     endDate DATE NOT NULL,
-    contractPrice number(38,2)
+    contractPrice number(38, 2)
 );
 
 /*
@@ -37,25 +38,36 @@ err EXCEPTION;
 
 BEGIN OPEN required_buildings;
 
+IF required_buildings % notfound THEN RAISE err;
+
 LOOP FETCH required_buildings INTO line_atr;
 
 EXIT
 WHEN required_buildings % notfound;
+
 counter_buildings := required_buildings % rowcount;
-insert into buildings_vspomog values (line_atr.buildKey, line_atr.typeObj,line_atr.clientKey,line_atr.teamKey,line_atr.contraktDate,line_atr.endDate, line_atr.contractPrice);
+
+INSERT INTO
+    buildings_vspomog
+VALUES
+    (
+        line_atr.buildKey,
+        line_atr.typeObj,
+        line_atr.clientKey,
+        line_atr.teamKey,
+        line_atr.contraktDate,
+        line_atr.endDate,
+        line_atr.contractPrice
+    );
 
 END LOOP;
 
 close required_buildings;
 
-IF counter_buildings = 0 THEN RAISE err;
-
-END IF;
-
 DBMS_OUTPUT.PUT_LINE('Количество: ' || counter_buildings);
 
 EXCEPTION
-WHEN STORAGE_ERROR THEN RAISE_APPLICATION_ERROR(-20003, 'Не хватает оперативной памяти!');
+WHEN STORAGE_ERROR THEN RAISE_APPLICATION_ERROR(-6500, 'Не хватает оперативной памяти!');
 
 WHEN err THEN DBMS_OUTPUT.PUT_LINE('В этом месяце нет строительств');
 
