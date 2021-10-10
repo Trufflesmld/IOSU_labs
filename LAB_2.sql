@@ -92,8 +92,10 @@ SELECT
     COUNT(buildKey) AS Finished_buildings
 FROM
     buildings
+WHERE
+    endDate < (SELECT sysdate from dual)
 GROUP BY
-    TO_CHAR(enddate, 'q') AS quarter;
+    TO_CHAR(enddate, 'q');
 
 /*Список заказчиков у которых объект "ТипN"  *IN* +*/
 SELECT
@@ -169,7 +171,7 @@ FROM
                 SELECT
                     avg(contractprice)
                 FROM
-                    buildings
+                    buildingsQ
             )
         ORDER BY
             sum(contractprice) DESC
@@ -177,9 +179,9 @@ FROM
 
 UPDATE
     teams
-SET STRENGTH =
-    CASE
-        WHEN teamkey = 1 THEN 7
-        WHEN teamkey = 2 THEN 9
-    else STRENGTH
+SET
+    STRENGTH = CASE
+        WHEN teamkey = 1 THEN 8
+        WHEN teamkey = 2 THEN 8
+        ELSE STRENGTH
     END;
