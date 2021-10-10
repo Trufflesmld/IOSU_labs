@@ -39,6 +39,7 @@ err EXCEPTION;
 BEGIN OPEN required_buildings;
 
 IF required_buildings % notfound THEN RAISE err;
+end if;
 
 LOOP FETCH required_buildings INTO line_atr;
 
