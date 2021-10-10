@@ -64,12 +64,3 @@ END;
 /
 /* 
  *Создать функцию, подсчитывающую, сколько этапов выполнено по каждому объекту. Вернуть количество объектов, по которым завершены все этапы.*/
-CREATE
-OR REPLACE PROCEDURE show_the_date IS Today DATE DEFAULT SYSDATE;
-
-BEGIN --вывести текущую дату
-DBMS_OUTPUT.PUT_LINE ('сегодня   ' || today);
-
-END show_the_date;
-
-/
