@@ -1,7 +1,7 @@
-/*Серверный вывод результатов*/
+-- Серверный вывод результатов
 SET SERVEROUTPUT ON;
 
--- * Вспомогательная таблица
+-- Вспомогательная таблица
 CREATE TABLE buildings_vspomog (
     buildkey      NUMBER,
     typeobj       VARCHAR2(15) NOT NULL,
@@ -69,7 +69,215 @@ EXCEPTION
 END;
 / 
 
+--!-------------------------------------------------------------------------------------------------------
+-- * Создать функцию, подсчитывающую, сколько было затрачено на материалы 
+--!-------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION all_money_of_build (
+    bk buildings.buildkey%TYPE
+) RETURN stuf.price_of_stuf%TYPE IS
 
---!-------------------------------------------------------------------------------------------------------
--- * Создать функцию, подсчитывающую, сколько было затрацено на материалы 
---!-------------------------------------------------------------------------------------------------------
+    allmoney       stuf.price_of_stuf%TYPE DEFAULT 0;
+    CURSOR curs_stufkey_needed IS
+    SELECT
+        stufkey,
+        neededstuf
+    FROM
+        s_s
+    WHERE
+        s_s.buildkey = bk;
+
+    stufkey_needed curs_stufkey_needed%rowtype;
+    price_stuf     stuf.price_of_stuf%TYPE;
+    err EXCEPTION;
+BEGIN
+    OPEN curs_stufkey_needed;
+    FETCH curs_stufkey_needed INTO stufkey_needed;
+    IF curs_stufkey_needed%notfound THEN
+        RAISE err;
+    END IF;
+    LOOP
+        EXIT WHEN curs_stufkey_needed%notfound;
+        SELECT
+            price_of_stuf
+        INTO price_stuf
+        FROM
+            stuf
+        WHERE
+            stuf.stufkey = stufkey_needed.stufkey;
+
+        allmoney := allmoney + price_stuf * stufkey_needed.neededstuf;
+        FETCH curs_stufkey_needed INTO stufkey_needed;
+    END LOOP;
+
+    RETURN allmoney;
+EXCEPTION
+    WHEN timeout_on_resource THEN
+        raise_application_error(
+                               -20002,
+                               'Превышен интервал ожидания'
+        );
+    WHEN value_error THEN
+        raise_application_error(
+                               -20004,
+                               'Ошибка в операции преобразования или математической операции!'
+        );
+    WHEN err THEN
+        dbms_output.put_line('По этому строительству пока что нет заказов на материалы');
+END all_money_of_build;
+/
+
+SELECT
+    all_money_of_build(
+        5
+    )
+FROM
+    dual;
+
+--!-----------------------------------------------------------------------------------------------------------------------------------------------------
+-- * Локальная программа (считает деньги по каждому этапу)
+--!-----------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION all_money_of_stage_in_build (
+    bk     buildings.buildkey%TYPE,
+    stagek stages.stagekey%TYPE
+) RETURN stuf.price_of_stuf%TYPE IS
+
+    allmoney_of_stage stuf.price_of_stuf%TYPE DEFAULT 0;
+    CURSOR curs_stufkey_needed IS
+    SELECT
+        stufkey,
+        neededstuf
+    FROM
+        s_s
+    WHERE
+        s_s.buildkey = bk
+        AND s_s.stagekey = stagek;
+
+    stufkey_needed    curs_stufkey_needed%rowtype;
+    price_stuf        stuf.price_of_stuf%TYPE;
+    name_of_stage     stages.stagename%TYPE;
+    err EXCEPTION;
+BEGIN
+    SELECT
+        stagename
+    INTO name_of_stage
+    FROM
+        stages
+    WHERE
+        stages.stagekey = stagek;
+
+    OPEN curs_stufkey_needed;
+    FETCH curs_stufkey_needed INTO stufkey_needed;
+    IF curs_stufkey_needed%notfound THEN
+        RAISE err;
+    END IF;
+    LOOP
+        EXIT WHEN curs_stufkey_needed%notfound;
+        SELECT
+            price_of_stuf
+        INTO price_stuf
+        FROM
+            stuf
+        WHERE
+            stuf.stufkey = stufkey_needed.stufkey;
+
+        allmoney_of_stage := allmoney_of_stage + price_stuf * stufkey_needed.neededstuf;
+        FETCH curs_stufkey_needed INTO stufkey_needed;
+    END LOOP;
+
+    dbms_output.put_line('По этапу '
+                         || name_of_stage
+                         || ' было затрачено '
+                         || allmoney_of_stage
+                         || ' денежных единиц');
+
+    RETURN allmoney_of_stage;
+EXCEPTION
+    WHEN timeout_on_resource THEN
+        raise_application_error(
+                               -20002,
+                               'Превышен интервал ожидания'
+        );
+    WHEN value_error THEN
+        raise_application_error(
+                               -20004,
+                               'Ошибка в операции преобразования или математической операции!'
+        );
+    WHEN err THEN
+        dbms_output.put_line('По этому строительству пока что нет заказов на материалы');
+END all_money_of_stage_in_build;
+/
+
+SELECT
+    all_money_of_stage_in_build(
+        5, 41
+    )
+FROM
+    dual;
+
+    
+--!-----------------------------------------------------------------------------------------------------------------------------------------------------
+-- * Функция + локалка
+--!-----------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION all_money_of_build (
+    bk buildings.buildkey%TYPE
+) RETURN stuf.price_of_stuf%TYPE IS
+
+    allmoney    stuf.price_of_stuf%TYPE DEFAULT 0;
+    CURSOR curs_build_stage IS
+    SELECT
+        *
+    FROM
+        b_s
+    WHERE
+        b_s.buildkey = bk;
+
+    build_stage curs_build_stage%rowtype;
+    err EXCEPTION;
+BEGIN
+    OPEN curs_build_stage;
+    FETCH curs_build_stage INTO build_stage;
+    IF curs_build_stage%notfound THEN
+        RAISE err;
+    END IF;
+    LOOP
+        EXIT WHEN curs_build_stage%notfound;
+        allmoney := allmoney + all_money_of_stage_in_build(
+                                                          build_stage.buildkey,
+                                                          build_stage.stagekey
+                               );
+        FETCH curs_build_stage INTO build_stage;
+    END LOOP;
+
+    RETURN allmoney;
+EXCEPTION
+    WHEN timeout_on_resource THEN
+        raise_application_error(
+                               -20002,
+                               'Превышен интервал ожидания'
+        );
+    WHEN value_error THEN
+        raise_application_error(
+                               -20004,
+                               'Ошибка в операции преобразования или математической операции!'
+        );
+    WHEN err THEN
+        dbms_output.put_line('По этому строительству пока что нет заказов на материалы');
+END all_money_of_build;
+/
+
+SELECT
+    all_money_of_build(
+        21
+    )
+FROM
+    dual;
+
+-- ? Присутствует вопрос, что если в B_S есть этапы по всему а в S_S к этапу который есть в B_S не закреплены материалы,
+-- ? то вылетает ошибка, потому что не в S_S не находится этап который указан в B_S
+-- ? это фиксится либо заполением B_S или это делать как исключительную ситуацию
+
+
+
+--!-----------------------------------------------------------------------------------------------------------------------------------------------------
+-- * Перегруз
+--!-----------------------------------------------------------------------------------------------------------------------------------------------------
