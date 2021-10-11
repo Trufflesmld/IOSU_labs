@@ -273,11 +273,59 @@ FROM
     dual;
 
 -- ? Присутствует вопрос, что если в B_S есть этапы по всему а в S_S к этапу который есть в B_S не закреплены материалы,
--- ? то вылетает ошибка, потому что не в S_S не находится этап который указан в B_S
+-- ? то вылетает ошибка, потому что в S_S не находится этап который указан в B_S
 -- ? это фиксится либо заполением B_S или это делать как исключительную ситуацию
 
 
 
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
--- * Перегруз
+-- * Перегруз 
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE buildings_current_month(month_num in number, year_num in number) IS
+
+    counter_buildings NUMBER;
+    line_atr          buildings%rowtype;
+    CURSOR required_buildings IS
+    SELECT
+        *
+    FROM
+        buildings
+    WHERE
+        buildings.enddate > to_date(to_char('01.'||month_num||'.'||year_num), 'dd.mm.yyyy');
+
+    err EXCEPTION;
+BEGIN
+    OPEN required_buildings;
+    FETCH required_buildings INTO line_atr;
+    IF required_buildings%notfound THEN
+        RAISE err;
+    END IF;
+    LOOP
+        EXIT WHEN required_buildings%notfound;
+        counter_buildings := required_buildings%rowcount;
+        INSERT INTO buildings_vspomog VALUES (
+            line_atr.buildkey,
+            line_atr.typeobj,
+            line_atr.clientkey,
+            line_atr.teamkey,
+            line_atr.contraktdate,
+            line_atr.enddate,
+            line_atr.contractprice
+        );
+
+        FETCH required_buildings INTO line_atr;
+    END LOOP;
+
+    COMMIT;
+    CLOSE required_buildings;
+    dbms_output.put_line('Количество объектов:' || counter_buildings);
+EXCEPTION
+    WHEN storage_error THEN
+        raise_application_error(
+                               -6500,
+                               'Не хватает оперативной памяти!'
+        );
+    WHEN err THEN
+        dbms_output.put_line('В этом месяце нет строительств');
+END;
+/ 
