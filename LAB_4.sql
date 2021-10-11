@@ -1,83 +1,75 @@
 /*Серверный вывод результатов*/
-SET
-    SERVEROUTPUT ON;
+SET SERVEROUTPUT ON;
 
 -- * Вспомогательная таблица
-CREATE TABLE buildings_vspomog(
-    buildKey NUMBER,
-    typeObj VARCHAR2(15) NOT NULL,
-    clientKey INTEGER NOT NULL,
-    teamKey INTEGER NOT NULL,
-    contraktDate DATE NOT NULL,
-    endDate DATE NOT NULL,
-    contractPrice number(38, 2)
+CREATE TABLE buildings_vspomog (
+    buildkey      NUMBER,
+    typeobj       VARCHAR2(15) NOT NULL,
+    clientkey     INTEGER NOT NULL,
+    teamkey       INTEGER NOT NULL,
+    contraktdate  DATE NOT NULL,
+    enddate       DATE NOT NULL,
+    contractprice NUMBER(38, 2)
 );
 
--- *Создать процедуру, копирующую строки с информацией о строительстве в текущем месяце во вспомогательную таблицу. Подсчитать количество извлеченных строк.
-CREATE
-OR REPLACE PROCEDURE buildings_current_month IS Today DATE DEFAULT SYSDATE;
+--!----------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- * Создать процедуру, копирующую строки с информацией о строительстве в текущем месяце во вспомогательную таблицу. Подсчитать количество извлеченных строк.
+--!----------------------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE buildings_current_month IS
 
-counter_buildings number;
+    counter_buildings NUMBER;
+    line_atr          buildings%rowtype;
+    CURSOR required_buildings IS
+    SELECT
+        *
+    FROM
+        buildings
+    WHERE
+        buildings.enddate > (
+            SELECT
+                sysdate
+            FROM
+                dual
+        );
 
-line_atr buildings % ROWTYPE;
+    err EXCEPTION;
+BEGIN
+    OPEN required_buildings;
+    FETCH required_buildings INTO line_atr;
+    IF required_buildings%notfound THEN
+        RAISE err;
+    END IF;
+    LOOP
+        EXIT WHEN required_buildings%notfound;
+        counter_buildings := required_buildings%rowcount;
+        INSERT INTO buildings_vspomog VALUES (
+            line_atr.buildkey,
+            line_atr.typeobj,
+            line_atr.clientkey,
+            line_atr.teamkey,
+            line_atr.contraktdate,
+            line_atr.enddate,
+            line_atr.contractprice
+        );
 
-cursor required_buildings IS
-SELECT
-    *
-FROM
-    buildings
-WHERE
-    buildings.endDate > (
-        SELECT
-            sysdate
-        FROM
-            dual
-    );
+        FETCH required_buildings INTO line_atr;
+    END LOOP;
 
-err EXCEPTION;
-
-BEGIN OPEN required_buildings;
-
-FETCH required_buildings INTO line_atr;
-
-IF required_buildings % notfound THEN RAISE err;
-
-END IF;
-
-LOOP EXIT
-WHEN required_buildings % notfound;
-
-counter_buildings := required_buildings % rowcount;
-
-INSERT INTO
-    buildings_vspomog
-VALUES
-    (
-        line_atr.buildKey,
-        line_atr.typeObj,
-        line_atr.clientKey,
-        line_atr.teamKey,
-        line_atr.contraktDate,
-        line_atr.endDate,
-        line_atr.contractPrice
-    );
-
-FETCH required_buildings INTO line_atr;
-
-END LOOP;
-commit;
-
-close required_buildings;
-
-DBMS_OUTPUT.PUT_LINE('Количество объектов:' || counter_buildings);
-
+    COMMIT;
+    CLOSE required_buildings;
+    dbms_output.put_line('Количество объектов:' || counter_buildings);
 EXCEPTION
-WHEN STORAGE_ERROR THEN RAISE_APPLICATION_ERROR(-6500, 'Не хватает оперативной памяти!');
-
-WHEN err THEN DBMS_OUTPUT.PUT_LINE('В этом месяце нет строительств');
-
+    WHEN storage_error THEN
+        raise_application_error(
+                               -6500,
+                               'Не хватает оперативной памяти!'
+        );
+    WHEN err THEN
+        dbms_output.put_line('В этом месяце нет строительств');
 END;
-
 / 
 
--- *Создать функцию, подсчитывающую, сколько этапов выполнено по каждому объекту. Вернуть количество объектов, по которым завершены все этапы.
+
+--!-------------------------------------------------------------------------------------------------------
+-- * Создать функцию, подсчитывающую, сколько было затрацено на материалы 
+--!-------------------------------------------------------------------------------------------------------
