@@ -267,14 +267,11 @@ END all_money_of_build;
 
 SELECT
     all_money_of_build(
-        21
+        5
     )
 FROM
     dual;
 
--- ? Присутствует вопрос, что если в B_S есть этапы по всему а в S_S к этапу который есть в B_S не закреплены материалы,
--- ? то вылетает ошибка, потому что в S_S не находится этап который указан в B_S
--- ? это фиксится либо заполением B_S или это делать как исключительную ситуацию
 
 
 
@@ -375,7 +372,7 @@ END pack_test;
 
 --Create a new Package Body
 
-CREATE or REPLACE PACKAGE BODY pack_test IS
+CREATE OR REPLACE PACKAGE BODY pack_test IS
 
   -- Add procedure body
     PROCEDURE buildings_current_month IS
