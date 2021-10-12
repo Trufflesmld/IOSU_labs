@@ -9,7 +9,8 @@ CREATE TABLE buildings_vspomog (
     teamkey       INTEGER NOT NULL,
     contraktdate  DATE NOT NULL,
     enddate       DATE NOT NULL,
-    contractprice NUMBER(38, 2)
+    contractprice NUMBER(38, 2),
+    current_month VARCHAR2(10)
 );
 
 --!----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -49,7 +50,10 @@ BEGIN
             line_atr.teamkey,
             line_atr.contraktdate,
             line_atr.enddate,
-            line_atr.contractprice
+            line_atr.contractprice,
+            to_char(
+                sysdate, 'mm.yyyy'
+            )
         );
 
         FETCH required_buildings INTO line_atr;
@@ -315,14 +319,17 @@ BEGIN
         EXIT WHEN required_buildings%notfound;
         counter_buildings := required_buildings%rowcount;
         INSERT INTO buildings_vspomog VALUES (
-            line_atr.buildkey,
-            line_atr.typeobj,
-            line_atr.clientkey,
-            line_atr.teamkey,
-            line_atr.contraktdate,
-            line_atr.enddate,
-            line_atr.contractprice
-        );
+                line_atr.buildkey,
+                line_atr.typeobj,
+                line_atr.clientkey,
+                line_atr.teamkey,
+                line_atr.contraktdate,
+                line_atr.enddate,
+                line_atr.contractprice,
+                to_char(month_num
+                        || '.'
+                        || year_num)
+            );
 
         FETCH required_buildings INTO line_atr;
     END LOOP;
@@ -409,7 +416,10 @@ CREATE OR REPLACE PACKAGE BODY pack_test IS
                 line_atr.teamkey,
                 line_atr.contraktdate,
                 line_atr.enddate,
-                line_atr.contractprice
+                line_atr.contractprice,
+                to_char(
+                    sysdate, 'mm.yyyy'
+                )
             );
 
             FETCH required_buildings INTO line_atr;
@@ -471,7 +481,10 @@ CREATE OR REPLACE PACKAGE BODY pack_test IS
                 line_atr.teamkey,
                 line_atr.contraktdate,
                 line_atr.enddate,
-                line_atr.contractprice
+                line_atr.contractprice,
+                to_char(month_num
+                        || '.'
+                        || year_num)
             );
 
             FETCH required_buildings INTO line_atr;
