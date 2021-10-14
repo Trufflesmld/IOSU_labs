@@ -93,7 +93,12 @@ SELECT
 FROM
     buildings
 WHERE
-    endDate < (SELECT sysdate from dual)
+    endDate < (
+        SELECT
+            sysdate
+        FROM
+            dual
+    )
 GROUP BY
     TO_CHAR(enddate, 'q');
 
