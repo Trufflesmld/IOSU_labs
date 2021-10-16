@@ -1,0 +1,121 @@
+<!--work by WarLogon april 2012-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+	<title>ЭУМКД "Информационное обеспечение систем управления"</title>
+	<meta http-equiv="content-type" content="text/html; charset=windows-1251" />
+	<link rel="stylesheet" href="../data/nav_style.css" type="text/css">
+	
+	<script language="javascript">
+function showMenu(m) {
+	var ul = document.getElementById("bl_downer"+m);
+	var a = document.getElementById("bl_click"+m);
+	if (ul.style.display == "block")
+	{
+		ul.style.display = "none";
+		a.style.bgColor = "#333333";
+		a.style.color = "#ffffff";
+	}
+	else
+	{
+		ul.style.display = "block";
+		a.style.bgColor = "#444444";
+		a.style.color = "blue";
+	}
+}
+
+
+function showList(m) {
+	var ul = document.getElementById("a-list"+m);
+	var a = document.getElementById("a_click"+m);
+	if (ul.style.display == "block")
+	{
+		ul.style.display = "none";
+		a.style.bgColor = "#333333";
+		a.style.color = "#ffffff";
+	}
+	else
+	{
+		ul.style.display = "block";
+		a.style.bgColor = "#444444";
+		a.style.color = "blue";
+	}
+}
+
+function showChapters(m) {
+			var ul = document.getElementsByClassName("bl_chapters"+m);
+			var a = document.getElementById("a_click_chapter"+m);
+			for (var i = ul.length - 1; i >= 0; i--) {
+				if (ul[i].style.display == "block")
+				{
+					var chapterThemes = document.querySelectorAll('[data-chapterId="'+ m +'"]');
+					for (var j = chapterThemes.length - 1; j >= 0; j--) {
+						chapterThemes[j].style.display = "none"
+					}
+					ul[i].style.display = "none";
+					ul[i].getElementsByTagName('a')[0].style.color = "#ffffff";
+					ul[i].getElementsByTagName('a')[0].style.bgColor = "#333333";
+					a.style.bgColor = "#333333";
+					a.style.color = "#ffffff";
+				}
+				else
+				{
+					ul[i].style.display = "block";
+					a.style.bgColor = "#444444";
+					a.style.color = "blue";
+				}
+
+			}
+		}
+
+</script>
+	
+</head>
+<body bgcolor="#2271b4" marginwidth="0" marginheight="0" onLoad="window.parent.parent.logo.menuIdmReload();">
+    <ul id="nav">
+		<ul id="bl_downer1">
+			<li> <a id="a_click_chapter1" href="#" onClick="showChapters(1)">ЧАСТЬ 1</a> </li>
+		</ul>
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li style="font-size:9px"><a href="questions_1.htm" target="rightframe">Вопросы к зачету</a></li>
+		</ul>	
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li> <a id="a_click2" href="#" onClick="showList(2)">Тесты</a> </li>
+		</ul>
+
+		<ul id = "a-list2", data-chapterId="2", style= "display:none">
+			<li style="font-size:9px"><a href="test_1.htm" target="rightframe">1. Введение. Представление данных в памяти компьютера</a></li>
+			<li style="font-size:9px"><a href="test_2.htm" target="rightframe">2. Модели представления данных</a></li>
+			<li style="font-size:9px"><a href="test_3.htm" target="rightframe">3. Проектирование реляционных БД</a></li>
+			<li style="font-size:9px"><a href="test_4.htm" target="rightframe">4. Реляционная алгебра</a></li>
+			<li style="font-size:9px"><a href="test_5.htm" target="rightframe">5. CASE-технологии</a></li>
+			<li style="font-size:9px"><a href="test_6.htm" target="rightframe">6. Организация доступа прикладной программы к серверу базы данных</a></li>
+		</ul>
+
+
+		<ul id="bl_downer3">
+			<li> <a id="a_click_chapter3" href="#" onClick="showChapters(3)">ЧАСТЬ 2</a> </li>
+		</ul>
+
+		<ul class="bl_chapters3", style= "display:none">
+			<li style="font-size:9px"><a href="questions_2.htm" target="rightframe">Вопросы к экзамену</a></li>
+		</ul>	
+
+		<ul class="bl_chapters3", style= "display:none">
+			<li> <a id="a_click3" href="#" onClick="showList(3)">Тесты</a> </li>
+		</ul>
+
+		<ul id = "a-list3", data-chapterId="3", style= "display:none">
+			<li style="font-size:9px"><a href="test_7.htm" target="rightframe">7. Структурированный язык запросов – SQL</a></li>
+			<li style="font-size:9px"><a href="test_8.htm" target="rightframe">8. Процедурный язык СУБД Oracle –PL/SQL</a></li>
+			<li style="font-size:9px"><a href="test_9.htm" target="rightframe">9. Создание приложений баз данных средствами ODBC</a></li>
+		</ul>
+
+
+	</ul>
+</body>
+</html>
+
+

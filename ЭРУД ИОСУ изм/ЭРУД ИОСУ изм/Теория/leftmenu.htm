@@ -1,0 +1,185 @@
+<!--work by WarLogon april 2012-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+	<title>ЭУМКД "Информационное обеспечение систем управления"</title>
+	<meta http-equiv="content-type" content="text/html; charset=windows-1251" />
+	<link rel="stylesheet" href="../data/nav_style.css" type="text/css">
+	
+	<script language="javascript">
+		function showMenu(m) {
+			var ul = document.getElementById("bl_downer"+m);
+			var a = document.getElementById("bl_click"+m);
+			if (ul.style.display == "block")
+			{
+				ul.style.display = "none";
+				a.style.bgColor = "#333333";
+				a.style.color = "#ffffff";
+			}
+			else
+			{
+				ul.style.display = "block";
+				a.style.bgColor = "#444444";
+				a.style.color = "blue";
+			}
+		}
+
+
+		function showList(m) {
+			var ul = document.getElementById("a-list"+m);
+			var a = document.getElementById("a_click"+m);
+			if (ul.style.display == "block")
+			{
+				ul.style.display = "none";
+				a.style.bgColor = "#333333";
+				a.style.color = "#ffffff";
+			}
+			else
+			{
+				ul.style.display = "block";
+				a.style.bgColor = "#444444";
+				a.style.color = "blue";
+			}
+		}
+
+		function showChapters(m) {
+			var ul = document.getElementsByClassName("bl_chapters"+m);
+			var a = document.getElementById("a_click_chapter"+m);
+			for (var i = ul.length - 1; i >= 0; i--) {
+				if (ul[i].style.display == "block")
+				{
+					var chapterThemes = document.querySelectorAll('[data-chapterId="'+ m +'"]');
+					for (var j = chapterThemes.length - 1; j >= 0; j--) {
+						chapterThemes[j].style.display = "none"
+					}
+					ul[i].style.display = "none";
+					ul[i].getElementsByTagName('a')[0].style.color = "#ffffff";
+					ul[i].getElementsByTagName('a')[0].style.bgColor = "#333333";
+					a.style.bgColor = "#333333";
+					a.style.color = "#ffffff";
+				}
+				else
+				{
+					ul[i].style.display = "block";
+					a.style.bgColor = "#444444";
+					a.style.color = "blue";
+				}
+
+			}
+		}
+
+	</script>
+	
+</head>
+<body bgcolor="#2271b4" marginwidth="0" marginheight="0" onLoad="window.parent.parent.logo.menuIdmReload();">
+	<ul id="nav">
+		<ul id="bl_downer1">
+			<li> <a id="a_click_chapter1" href="#" onClick="showChapters(1)">ЧАСТЬ 1. ОСНОВЫ ТЕОРИИ БАЗ ДАННЫХ</a> </li>
+		</ul>
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li> <a id="a_click1" href="#" onClick="showList(1)">1. Введение. Представление данных в памяти компьютера</a> </li>
+		</ul>
+
+		<ul id = "a-list1", data-chapterId="1", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_1/1.html" target="rightframe">1. Предмет дисциплины и ее задачи</a></li>
+			<li style="font-size:9px"><a href="chapter_1/2.html" target="rightframe">2. Основные понятия</a></li>
+			<li style="font-size:9px"><a href="chapter_1/3.html" target="rightframe">3. Типы и структуры данных </a></li>
+		</ul>	
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li> <a id="a_click2" href="#" onClick="showList(2)">2. Модели представления данных</a> </li>
+		</ul>
+
+		<ul id = "a-list2", data-chapterId="2", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_2/4.html" target="rightframe">4. Файловые системы</a></li>
+			<li style="font-size:9px"><a href="chapter_2/5.html" target="rightframe">5. Иерархические и сетевые модели</a></li>
+			<li style="font-size:9px"><a href="chapter_2/6.html" target="rightframe">6. Реляционные модели</a></li>
+			<li style="font-size:9px"><a href="chapter_2/7.html" target="rightframe">7. Постреляционные модели</a></li>
+		</ul>
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li> <a id="a_click3" href="#" onClick="showList(3)">3. Проектирование реляционных баз данных</a> </li>
+		</ul>
+
+		<ul id = "a-list3", data-chapterId="3", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_3/8.html" target="rightframe">8. Этапы и способы проектирования РБД</a></li>
+			<li style="font-size:9px"><a href="chapter_3/9.html" target="rightframe">9. Проектирование баз данных на основе нормализации отношений</a></li>
+			<li style="font-size:9px"><a href="chapter_3/10.html" target="rightframe">10. OLTP и OLAP-системы</a></li>
+		</ul>
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li> <a id="a_click4" href="#" onClick="showList(4)">4. Реляционная алгебра</a> </li>
+		</ul>
+
+		<ul id = "a-list4", data-chapterId="4", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_4/11.html" target="rightframe">11. Операции над отношениями: общие сведения</a></li>
+			<li style="font-size:9px"><a href="chapter_4/12.html" target="rightframe">12. Синтаксис операторов реляционной алгебры</a></li>
+		</ul>
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li> <a id="a_click5" href="#" onClick="showList(5)">5. CASE-технологии</a> </li>
+		</ul>
+
+		<ul id = "a-list5", data-chapterId="5", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_5/13.html" target="rightframe">13. Основы методологии автоматизированного проектирования ИС</a></li>
+			<li style="font-size:9px"><a href="chapter_5/14.html" target="rightframe">14. Модели жизненного цикла ПО</a></li>
+			<li style="font-size:9px"><a href="chapter_5/15.html" target="rightframe">15. Структурный подход к проектированию ИС</a></li>
+			<li style="font-size:9px"><a href="chapter_5/16.html" target="rightframe">16. Построение диаграмм потоков данных</a></li>
+			<li style="font-size:9px"><a href="chapter_5/17.html" target="rightframe">17. Построение диаграмм «сущность-связь»</a></li>
+		</ul>
+
+		<ul class="bl_chapters1", style= "display:none">
+			<li> <a id="a_click6" href="#" onClick="showList(6)">6. Способы доступа прикладной программы к серверу базы данных</a> </li>
+		</ul>
+
+		<ul id = "a-list6", data-chapterId=6", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_6/18.html" target="rightframe">18. Общие сведения о способах доступа к БД</a></li>
+			<li style="font-size:9px"><a href="chapter_6/19.html" target="rightframe">19. Организация доступа прикладной программы к серверу БД</a></li>
+		</ul>
+
+		<ul id="bl_downer2">
+			<li> <a id="a_click_chapter2" href="#" onClick="showChapters(2)">ЧАСТЬ 2. ИЗУЧЕНИЕ SQL и PL/SQL</a> </li>
+		</ul>
+
+		<ul class="bl_chapters2", style= "display:none">
+			<li> <a id="a_click7" href="#" onClick="showList(7)">7. Структурированный язык запросов – SQL</a> </li>
+		</ul>
+
+		<ul id = "a-list7", data-chapterId="7", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_7/20.html" target="rightframe">20. Общие сведения. Структура языка</a></li>
+			<li style="font-size:9px"><a href="chapter_7/21.html" target="rightframe">21. Операторы языка манипулирования данными</a></li>
+			<li style="font-size:9px"><a href="chapter_7/22.html" target="rightframe">22. Операторы языка определения данных</a></li>
+			<li style="font-size:9px"><a href="chapter_7/23.html" target="rightframe">23. Транзакции</a></li>
+			<li style="font-size:9px"><a href="chapter_7/24.html" target="rightframe">24. Способы обеспечения безопасности данных</a></li>
+		</ul>	
+
+		<ul class="bl_chapters2", style= "display:none">
+			<li> <a id="a_click8" href="#" onClick="showList(8)">8. Процедурный язык СУБД Oracle –PL/SQL</a> </li>
+		</ul>
+
+		<ul id = "a-list8", data-chapterId="8", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_8/25.html" target="rightframe">25. Общие сведения и структура языка</a></li>
+			<li style="font-size:9px"><a href="chapter_8/26.html" target="rightframe">26. Типы данных PL/SQL</a></li>
+			<li style="font-size:9px"><a href="chapter_8/27.html" target="rightframe">27. Функциональные возможности программ</a></li>
+			<li style="font-size:9px"><a href="chapter_8/28.html" target="rightframe">28. Программные единицы PL/SQL</a></li>
+			<li style="font-size:9px"><a href="chapter_8/29.html" target="rightframe">29. Служебные пакеты Oracle</a></li>
+		</ul>
+
+		<ul class="bl_chapters2", style= "display:none">
+			<li> <a id="a_click9" href="#" onClick="showList(9)">9. Создание приложений баз данных средствами ODBC</a> </li>
+		</ul>
+
+		<ul id = "a-list9", data-chapterId="9", style= "display:none">
+			<li style="font-size:9px"><a href="chapter_9/30.html" target="rightframe">30. Архитектура ODBC</a></li>
+			<li style="font-size:9px"><a href="chapter_9/31.html" target="rightframe">31. Алгоритмы работы ODBC</a></li>
+			<li style="font-size:9px"><a href="chapter_9/32.html" target="rightframe">32. Заключение</a></li>
+			<li style="font-size:9px"><a href="chapter_9/literature.html" target="rightframe">Литература</a></li>
+		</ul>
+
+
+	</ul>
+</body>
+</html>
+
+

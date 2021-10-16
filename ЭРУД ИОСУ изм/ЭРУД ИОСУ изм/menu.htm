@@ -1,0 +1,54 @@
+<!--work by WarLogon april 2012-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+	<title>ЭРУД "Информационное обеспечение систем управления"</title>
+	<meta http-equiv="content-type" content="text/html; charset=windows-1251" />
+    <link rel="stylesheet" href="data/style.css" type="text/css">  
+	<script language="JavaScript">
+	function menuIdmReload()
+	{
+		var a;
+		for (i=1; i<=6; i++)
+		{
+			a = document.getElementById("idm"+i);
+			a.style.fontWeight = "normal";
+			a.style.color = "#6495ED";
+		}
+		var openWindow = window.parent.content.location.href;
+		var m = openWindow.charAt(openWindow.length-5);
+		a = window.document.getElementById("idm"+m);
+		a.style.fontWeight = "bold";
+		a.style.color = "#ffffff";
+	}	
+	</script>
+</head>  
+<body bgcolor="#2271b4">
+<table class="menu_tbl" border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr>
+	<td rowspan=2><img src="data/images/air_logo.jpg" width="112px" height="112px" align="right"></td>
+	<td align="center">
+	<h2>Электронный ресурс по учебной дисциплине<br/>"Информационное обеспечение систем управления"</h2>    
+	<h3>для специальности<br/>1 - 53 01 07 «Информационные технологии и управление в технических системах»<br/>всех форм обучения</h3> 
+	</td>
+	
+</tr>
+<tr>
+	<td align="center">
+	<var class="headerbar">
+	<a id="idm1" href="index1.htm" target="content">Оглавление</a> | 
+	<a id="idm2" href="Программа/index2.htm" target="content">Программа</a> | 
+	<a id="idm3" href="Теория/index3.htm" target="content">Теория</a> | 
+	<a id="idm4" href="Практика/index4.htm" target="content">Практика</a> | 
+	<a id="idm5" href="Контроль знаний/index5.htm" target="content">Контроль знаний</a> | 
+	<a id="idm6" href="Об ЭРУД/index6.htm" target="content">Об авторах</a>
+	</var>
+	<td>
+</tr>
+</td>
+</table>
+<script language="JavaScript">
+	menuIdmReload();
+</script>
+</body>
+</html>

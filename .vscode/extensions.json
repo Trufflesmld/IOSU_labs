@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "aaron-bond.better-comments",
+        "ewandubashinski.plsqllint",
+        "mp.vscode-oracle-format",
+        "adpyke.vscode-sql-formatter"
+    ]
+}

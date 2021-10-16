@@ -88,11 +88,6 @@ CREATE OR REPLACE PACKAGE BODY pack IS
         CLOSE required_buildings;
         dbms_output.put_line('Количество объектов:' || counter_buildings);
     EXCEPTION
-        WHEN storage_error THEN
-            raise_application_error(
-                                   -6500,
-                                   'Не хватает оперативной памяти!'
-            );
         WHEN err1 THEN
             dbms_output.put_line('В этом месяце нет строительств или они уже добавлены в вспомогательную таблицу');
     END buildings_current_month;
@@ -163,11 +158,6 @@ CREATE OR REPLACE PACKAGE BODY pack IS
         CLOSE required_buildings;
         dbms_output.put_line('Количество объектов:' || counter_buildings);
     EXCEPTION
-        WHEN storage_error THEN
-            raise_application_error(
-                                   -6500,
-                                   'Не хватает оперативной памяти!'
-            );
         WHEN err1 THEN
             dbms_output.put_line('В этом месяце нет строительств или они уже добавлены в вспомогательную таблицу');
     END buildings_current_month;
@@ -228,15 +218,12 @@ CREATE OR REPLACE PACKAGE BODY pack IS
 
         RETURN allmoney_of_stage;
     EXCEPTION
-        WHEN timeout_on_resource THEN
-            raise_application_error(
-                                   -20002,
-                                   'Превышен интервал ожидания'
-            );
         WHEN no_data_found THEN
             dbms_output.put_line('Некорректный этап');
+            RETURN NULL;
         WHEN err1 THEN
-            dbms_output.put_line('По запрашиваемому этапу строительста нет информации');
+            dbms_output.put_line('По запрашиваемому этапу строительства нет информации');
+            RETURN NULL;
     END all_money_of_stage_in_build;
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
 -- * Функция + локалка
@@ -281,18 +268,9 @@ CREATE OR REPLACE PACKAGE BODY pack IS
 
         RETURN allmoney;
     EXCEPTION
-        WHEN timeout_on_resource THEN
-            raise_application_error(
-                                   -20002,
-                                   'Превышен интервал ожидания'
-            );
-        WHEN value_error THEN
-            raise_application_error(
-                                   -20004,
-                                   'Ошибка в операции преобразования или математической операции!'
-            );
         WHEN err1 THEN
             dbms_output.put_line('Такого строительства не существует');
+            RETURN NULL;
     END all_money_of_build;
 
 END pack;
@@ -322,7 +300,6 @@ BEGIN
         TO_DATE('26.12.21', 'dd.mm.yy'),
         100000
     );
-
     COMMIT;
     dbms_output.put_line('Процедура (если какие-то строительства месяца добавлены, но появилось новое):');
     pack.buildings_current_month;
@@ -332,12 +309,7 @@ BEGIN
     dbms_output.put_line('Функция нормальная:');
     dbms_output.put_line('Затраченные средства на строительство 5 - ' || pack.all_money_of_build(5));
     dbms_output.put_line('Функция в исключении своём:');
-    BEGIN
-        dbms_output.put_line(pack.all_money_of_build(100));
-    EXCEPTION
-        WHEN OTHERS THEN
-            NULL;
-    END;
+    dbms_output.put_line(pack.all_money_of_build(100));
     dbms_output.put_line('--------------------------------------------------------------------------------');
     dbms_output.put_line('Функция локалка:');
     dbms_output.put_line('Затраченные средства на строительство 5 на этапе 3 - '
@@ -346,26 +318,15 @@ BEGIN
                                                             43
                             ));
     dbms_output.put_line('Функция локалка в исключении програмном:');
-    BEGIN
-        dbms_output.put_line(pack.all_money_of_stage_in_build(
-                                                             5,
-                                                             75
-                             ));
-    EXCEPTION
-        WHEN OTHERS THEN
-            NULL;
-    END;
+    dbms_output.put_line(pack.all_money_of_stage_in_build(
+                                                         5,
+                                                         75
+                         ));
     dbms_output.put_line('Функция локалка в исключении своём:');
-    BEGIN
-        dbms_output.put_line(pack.all_money_of_stage_in_build(
-                                                             21,
-                                                             47
-                             ));
-    EXCEPTION
-        WHEN OTHERS THEN
-            NULL;
-    END;
-
+    dbms_output.put_line(pack.all_money_of_stage_in_build(
+                                                         21,
+                                                         47
+                         ));
     dbms_output.put_line('--------------------------------------------------------------------------------');
     dbms_output.put_line('Процедура перегруз нормальная:');
     pack.buildings_current_month(
@@ -374,3 +335,6 @@ BEGIN
     );
 END;
 /
+
+
+-- TODO: В отчет код пакета + анонимный блок + вывод
