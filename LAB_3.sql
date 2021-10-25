@@ -42,7 +42,7 @@ CREATE OR REPLACE VIEW buildings_view AS
         lead,
         fname
         || ' '
-        || lname AS clent_name,
+        || lname AS client_name,
         contraktdate,
         enddate,
         contractprice
