@@ -241,6 +241,8 @@ BEGIN
     );
 
     EXECUTE IMMEDIATE 'ALTER SESSION SET NLS_DATE_FORMAT = ''DD.MM.YY HH24:MI:SS''';
+    EXECUTE IMMEDIATE 'set linesize 1000';
+    EXECUTE IMMEDIATE 'SET SERVEROUTPUT ON';
 END;
 /
 
@@ -267,3 +269,94 @@ END;
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
 -- * Триггер INSTEAD OF для работы с необновляемым представлением.
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER buildings_view_update_trig INSTEAD OF
+    UPDATE ON buildings_view
+    FOR EACH ROW
+DECLARE
+    teamkey_new        teams.teamkey%TYPE;
+    clientkey_new      clients.clientkey%TYPE;
+    check_excep_lead   teams.lead%TYPE;
+    check_excep_client teams.lead%TYPE;
+BEGIN
+    IF :new.lead != :old.lead THEN
+        SELECT
+            lead
+        INTO check_excep_lead
+        FROM
+            teams
+        WHERE
+            lead = :new.lead;
+
+        SELECT
+            teamkey
+        INTO teamkey_new
+        FROM
+            teams
+        WHERE
+            lead = :new.lead;
+
+    ELSE
+        SELECT
+            teamkey
+        INTO teamkey_new
+        FROM
+            teams
+        WHERE
+            lead = :old.lead;
+
+    END IF;
+
+    IF :new.client_name != :old.client_name THEN
+        SELECT
+            fname
+            || ' '
+            || lname
+        INTO check_excep_client
+        FROM
+            clients
+        WHERE
+            fname
+            || ' '
+            || lname = :new.client_name;
+
+        SELECT
+            clientkey
+        INTO clientkey_new
+        FROM
+            clients
+        WHERE
+            fname
+            || ' '
+            || lname = :new.client_name;
+
+    ELSE
+        SELECT
+            clientkey
+        INTO clientkey_new
+        FROM
+            clients
+        WHERE
+            fname
+            || ' '
+            || lname = :old.lead;
+
+    END IF;
+
+    UPDATE buildings
+    SET
+        typeobj = :new.typeobj,
+        clientkey = clientkey_new,
+        teamkey = teamkey_new,
+        contraktdate = :new.contraktdate,
+        enddate = :new.enddate,
+        contractprice = :new.contractprice
+    WHERE
+        buildkey = :old.buildkey;
+
+EXCEPTION
+    WHEN no_data_found THEN
+        dbms_output.put_line('---------------------------------------');
+        dbms_output.put_line('Таких данных нет в родительской таблице');
+        dbms_output.put_line('---------------------------------------');
+END;
+/
