@@ -1,5 +1,4 @@
-SET
-    linesize 500;
+SET linesize 500;
 
 /*«Текущие этапы работы» (условная выборка); +*/
 SELECT
@@ -16,20 +15,20 @@ WHERE
 
 /*ИЛИ*/
 /*c внутренним соединением +*/
-SELECT
-    buildKey,
-    typeobj,
-    stagekey,
-    stagename
-FROM
-    buildings
-    INNER JOIN (
-        SELECT
-            *
-        FROM
-            B_S
-            INNER JOIN stages USING (stagekey)
-    ) USING (buildKey);
+-- SELECT
+--     buildKey,
+--     typeobj,
+--     stagekey,
+--     stagename
+-- FROM
+--     buildings
+--     INNER JOIN (
+--         SELECT
+--             *
+--         FROM
+--             B_S
+--             INNER JOIN stages USING (stagekey)
+--     ) USING (buildKey);
 
 /*«Сроки строительства объектов» / Кол-во затраченного материала на объект (итоговый запрос); +*/
 SELECT
@@ -176,12 +175,14 @@ FROM
                 SELECT
                     avg(contractprice)
                 FROM
-                    buildingsQ
+                    buildings
             )
         ORDER BY
             sum(contractprice) DESC
     ) USING(teamkey);
 
+
+--* Обновление
 UPDATE
     teams
 SET

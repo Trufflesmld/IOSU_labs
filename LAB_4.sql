@@ -300,6 +300,7 @@ BEGIN
         TO_DATE('26.12.21', 'dd.mm.yy'),
         100000
     );
+
     COMMIT;
     dbms_output.put_line('Процедура (если какие-то строительства месяца добавлены, но появилось новое):');
     pack.buildings_current_month;
