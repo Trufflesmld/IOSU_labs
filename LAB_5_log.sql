@@ -241,8 +241,8 @@ BEGIN
     );
 
     EXECUTE IMMEDIATE 'ALTER SESSION SET NLS_DATE_FORMAT = ''DD.MM.YY HH24:MI:SS''';
-    EXECUTE IMMEDIATE 'set linesize 1000';
-    EXECUTE IMMEDIATE 'SET SERVEROUTPUT ON';
+    EXECUTE IMMEDIATE 'set linesize 500';
+
 END;
 /
 
@@ -269,6 +269,7 @@ END;
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
 -- * Триггер INSTEAD OF для работы с необновляемым представлением.
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
+--* update
 CREATE OR REPLACE TRIGGER buildings_view_update_trig INSTEAD OF
     UPDATE ON buildings_view
     FOR EACH ROW
@@ -355,8 +356,103 @@ BEGIN
 
 EXCEPTION
     WHEN no_data_found THEN
-        dbms_output.put_line('---------------------------------------');
-        dbms_output.put_line('Таких данных нет в родительской таблице');
-        dbms_output.put_line('---------------------------------------');
+        dbms_output.put_line('-------------------------------------------');
+        dbms_output.put_line('| Таких данных нет в родительской таблице |');
+        dbms_output.put_line('-------------------------------------------');
 END;
 /
+
+UPDATE buildings_view
+SET
+    typeobj = '11'
+WHERE
+    buildkey = 6;
+
+--* insert
+
+CREATE OR REPLACE TRIGGER buildings_view_insert_trig INSTEAD OF
+    INSERT ON buildings_view
+DECLARE
+    teamkey_new        teams.teamkey%TYPE;
+    clientkey_new      clients.clientkey%TYPE;
+    check_excep_lead   teams.lead%TYPE;
+    check_excep_client teams.lead%TYPE;
+BEGIN
+        SELECT
+            lead
+        INTO check_excep_lead
+        FROM
+            teams
+        WHERE
+            lead = :new.lead;
+
+        SELECT
+            teamkey
+        INTO teamkey_new
+        FROM
+            teams
+        WHERE
+            lead = :new.lead;
+
+        SELECT
+            fname
+            || ' '
+            || lname
+        INTO check_excep_client
+        FROM
+            clients
+        WHERE
+            fname
+            || ' '
+            || lname = :new.client_name;
+
+        SELECT
+            clientkey
+        INTO clientkey_new
+        FROM
+            clients
+        WHERE
+            fname
+            || ' '
+            || lname = :new.client_name;
+
+
+    INSERT INTO buildings (
+        typeobj,
+        clientkey,
+        teamkey,
+        contraktdate,
+        enddate,
+        contractprice
+    ) VALUES (
+        :new.typeobj,
+        clientkey_new,
+        teamkey_new,
+        :new.contraktdate,
+        :new.enddate,
+        :new.contractprice
+    );
+
+EXCEPTION
+    WHEN no_data_found THEN
+        dbms_output.put_line('-------------------------------------------');
+        dbms_output.put_line('| Таких данных нет в родительской таблице |');
+        dbms_output.put_line('-------------------------------------------');
+END;
+/
+
+INSERT INTO buildings_view (
+    typeobj,
+    lead,
+    client_name,
+    contraktdate,
+    enddate,
+    contractprice
+) VALUES (
+    'Тип1',
+    'Станиславский Богдан Валерьевич',
+    'Былинский Трофим',
+    TO_DATE('14.08.21', 'dd.mm.yy'),
+    TO_DATE('15.08.21', 'dd.mm.yy'),
+    999999999
+);
