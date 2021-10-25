@@ -242,7 +242,6 @@ BEGIN
 
     EXECUTE IMMEDIATE 'ALTER SESSION SET NLS_DATE_FORMAT = ''DD.MM.YY HH24:MI:SS''';
     EXECUTE IMMEDIATE 'set linesize 500';
-
 END;
 /
 
@@ -269,9 +268,8 @@ END;
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
 -- * Триггер INSTEAD OF для работы с необновляемым представлением.
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
---* update
-CREATE OR REPLACE TRIGGER buildings_view_update_trig INSTEAD OF
-    UPDATE ON buildings_view
+CREATE OR REPLACE TRIGGER buildings_view_instead_of_trig INSTEAD OF
+    UPDATE OR INSERT OR DELETE ON buildings_view
     FOR EACH ROW
 DECLARE
     teamkey_new        teams.teamkey%TYPE;
@@ -279,7 +277,85 @@ DECLARE
     check_excep_lead   teams.lead%TYPE;
     check_excep_client teams.lead%TYPE;
 BEGIN
-    IF :new.lead != :old.lead THEN
+    IF updating THEN --* update
+        IF :new.lead != :old.lead THEN
+            SELECT
+                lead
+            INTO check_excep_lead
+            FROM
+                teams
+            WHERE
+                lead = :new.lead;
+
+            SELECT
+                teamkey
+            INTO teamkey_new
+            FROM
+                teams
+            WHERE
+                lead = :new.lead;
+
+        ELSE
+            SELECT
+                teamkey
+            INTO teamkey_new
+            FROM
+                teams
+            WHERE
+                lead = :old.lead;
+
+        END IF;
+
+        IF :new.client_name != :old.client_name THEN
+            SELECT
+                fname
+                || ' '
+                || lname
+            INTO check_excep_client
+            FROM
+                clients
+            WHERE
+                fname
+                || ' '
+                || lname = :new.client_name;
+
+            SELECT
+                clientkey
+            INTO clientkey_new
+            FROM
+                clients
+            WHERE
+                fname
+                || ' '
+                || lname = :new.client_name;
+
+        ELSE
+            SELECT
+                clientkey
+            INTO clientkey_new
+            FROM
+                clients
+            WHERE
+                fname
+                || ' '
+                || lname = :old.lead;
+
+        END IF;
+
+        UPDATE buildings
+        SET
+            typeobj = :new.typeobj,
+            clientkey = clientkey_new,
+            teamkey = teamkey_new,
+            contraktdate = :new.contraktdate,
+            enddate = :new.enddate,
+            contractprice = :new.contractprice
+        WHERE
+            buildkey = :old.buildkey;
+
+    END IF;
+
+    IF inserting THEN --* insert
         SELECT
             lead
         INTO check_excep_lead
@@ -296,18 +372,6 @@ BEGIN
         WHERE
             lead = :new.lead;
 
-    ELSE
-        SELECT
-            teamkey
-        INTO teamkey_new
-        FROM
-            teams
-        WHERE
-            lead = :old.lead;
-
-    END IF;
-
-    IF :new.client_name != :old.client_name THEN
         SELECT
             fname
             || ' '
@@ -330,29 +394,38 @@ BEGIN
             || ' '
             || lname = :new.client_name;
 
-    ELSE
-        SELECT
-            clientkey
-        INTO clientkey_new
-        FROM
-            clients
-        WHERE
-            fname
-            || ' '
-            || lname = :old.lead;
+        INSERT INTO buildings (
+            typeobj,
+            clientkey,
+            teamkey,
+            contraktdate,
+            enddate,
+            contractprice
+        ) VALUES (
+            :new.typeobj,
+            clientkey_new,
+            teamkey_new,
+            :new.contraktdate,
+            :new.enddate,
+            :new.contractprice
+        );
 
     END IF;
 
-    UPDATE buildings
-    SET
-        typeobj = :new.typeobj,
-        clientkey = clientkey_new,
-        teamkey = teamkey_new,
-        contraktdate = :new.contraktdate,
-        enddate = :new.enddate,
-        contractprice = :new.contractprice
-    WHERE
-        buildkey = :old.buildkey;
+    IF deleting THEN --* delete
+        DELETE FROM s_s
+        WHERE
+            buildkey = :old.buildkey;
+
+        DELETE FROM b_s
+        WHERE
+            buildkey = :old.buildkey;
+
+        DELETE FROM buildings
+        WHERE
+            buildkey = :old.buildkey;
+
+    END IF;
 
 EXCEPTION
     WHEN no_data_found THEN
@@ -367,79 +440,6 @@ SET
     typeobj = '11'
 WHERE
     buildkey = 6;
-
---* insert
-
-CREATE OR REPLACE TRIGGER buildings_view_insert_trig INSTEAD OF
-    INSERT ON buildings_view
-DECLARE
-    teamkey_new        teams.teamkey%TYPE;
-    clientkey_new      clients.clientkey%TYPE;
-    check_excep_lead   teams.lead%TYPE;
-    check_excep_client teams.lead%TYPE;
-BEGIN
-        SELECT
-            lead
-        INTO check_excep_lead
-        FROM
-            teams
-        WHERE
-            lead = :new.lead;
-
-        SELECT
-            teamkey
-        INTO teamkey_new
-        FROM
-            teams
-        WHERE
-            lead = :new.lead;
-
-        SELECT
-            fname
-            || ' '
-            || lname
-        INTO check_excep_client
-        FROM
-            clients
-        WHERE
-            fname
-            || ' '
-            || lname = :new.client_name;
-
-        SELECT
-            clientkey
-        INTO clientkey_new
-        FROM
-            clients
-        WHERE
-            fname
-            || ' '
-            || lname = :new.client_name;
-
-
-    INSERT INTO buildings (
-        typeobj,
-        clientkey,
-        teamkey,
-        contraktdate,
-        enddate,
-        contractprice
-    ) VALUES (
-        :new.typeobj,
-        clientkey_new,
-        teamkey_new,
-        :new.contraktdate,
-        :new.enddate,
-        :new.contractprice
-    );
-
-EXCEPTION
-    WHEN no_data_found THEN
-        dbms_output.put_line('-------------------------------------------');
-        dbms_output.put_line('| Таких данных нет в родительской таблице |');
-        dbms_output.put_line('-------------------------------------------');
-END;
-/
 
 INSERT INTO buildings_view (
     typeobj,
@@ -456,3 +456,8 @@ INSERT INTO buildings_view (
     TO_DATE('15.08.21', 'dd.mm.yy'),
     999999999
 );
+
+
+DELETE FROM buildings_view
+WHERE
+    lead = 'Станиславский Богдан Валерьевич';
