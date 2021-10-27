@@ -72,16 +72,16 @@ INSERT INTO buildings_view (
     'kek',
     TO_DATE('15.08.21', 'dd.mm.yy'),
     100.75
-);
+);  
 
 /*не работает*/
 DELETE FROM buildings_view
 WHERE
-    lead = 'Остапенко �?горь Николаевич';
+    lead = 'Остапенко Игорь Николаевич';
 
 DELETE FROM buildings_view
 WHERE
-    buildkey = '6';
+    buildkey = 6;
 
 /*Обновляемое представление*/
 CREATE OR REPLACE VIEW clients_view AS
