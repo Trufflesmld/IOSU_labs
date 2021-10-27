@@ -5,7 +5,7 @@
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE TRIGGER teams_employment_and_down_price_trig BEFORE
-    INSERT ON buildings
+    INSERT OR UPDATE ON buildings
     FOR EACH ROW
 DECLARE
     count_build INTEGER DEFAULT 0;
@@ -72,4 +72,41 @@ INSERT INTO buildings (
     TO_DATE('23.11.21', 'dd.mm.yy'),
     TO_DATE('15.12.21', 'dd.mm.yy'),
     100
+);
+
+
+--!----------------------------------------------------------------------------------------------------------------------------------------------------------------
+--* Отслеживать последовательное выполнение этапов по каждому объекту строительства 
+--!----------------------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER sequence_of_stages_trig BEFORE
+    INSERT ON build_stage
+    FOR EACH ROW
+DECLARE
+    old_stage INTEGER;
+BEGIN
+    SELECT
+        MAX(stagekey)
+    INTO old_stage
+    FROM
+        b_s
+    WHERE
+        buildkey = :new.buildkey;
+
+    IF :new.stagekey - old_stage != 1 THEN
+        raise_application_error(
+                               -20002,
+                               'Введенный этап строительства не соответсвует ожидаемому. Код ожидаемого этапа выполнения => '
+                               || (old_stage + 1)
+        );
+    END IF;
+
+END;
+/
+
+INSERT INTO b_s (
+    buildkey,
+    stagekey
+) VALUES (
+    21,
+    45
 );
