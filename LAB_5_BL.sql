@@ -68,8 +68,8 @@ INSERT INTO buildings (
     'Тип1',
     6,
     2,
-    TO_DATE('23.11.21', 'dd.mm.yy'),
-    TO_DATE('15.12.21', 'dd.mm.yy'),
+    TO_DATE('23.12.21', 'dd.mm.yy'),
+    TO_DATE('15.12.22', 'dd.mm.yy'),
     100
 );
 
@@ -147,7 +147,6 @@ COMPOUND TRIGGER
         END LOOP;
     END BEFORE STATEMENT;
     BEFORE EACH ROW IS BEGIN
-        dbms_output.put_line('im here');
         build_active := active_buildings.first;
         WHILE build_active IS NOT NULL LOOP
             IF :new.teamkey = active_buildings(build_active) THEN
@@ -158,7 +157,6 @@ COMPOUND TRIGGER
             build_active := active_buildings.next(build_active);
         END LOOP;
 
-        dbms_output.put_line('im here ended');
     END BEFORE EACH ROW;
     AFTER STATEMENT IS BEGIN
         IF active_team THEN
@@ -177,30 +175,65 @@ END;
 
 UPDATE buildings
 SET
-    teamkey = 1
+    teamkey = 3
 WHERE
     buildkey = 21;
 
-CREATE OR REPLACE TRIGGER buildings_compound FOR
-    UPDATE OF teamkey ON buildings
-COMPOUND TRIGGER
-    active_team BOOLEAN;
-    BEFORE EACH ROW IS BEGIN
-        dbms_output.put_line('im here');
-        IF :new.teamkey = 1 THEN
-            active_team := true;
-        END IF;
-        dbms_output.put_line('im here ended');
-    END BEFORE EACH ROW;
-    AFTER STATEMENT IS BEGIN
-        IF active_team THEN
-            UPDATE buildings
-            SET
-                enddate = enddate + 30
-            WHERE
-                buildkey = 22;
 
-        END IF;
-    END AFTER STATEMENT;
+
+
+
+--!----------------------------------------------------------------------------------------------------------------------------------------------------------------
+--* Scheduler каждую неделю проверяется закупка материала и обновляется price of stuff
+--!----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE upd_price_of_stuff IS
+    CURSOR buildkey_curs IS
+    SELECT DISTINCT
+        buildkey
+    FROM
+        b_s;
+
+    money buildings.contractprice%TYPE;
+BEGIN
+    FOR bk_record IN buildkey_curs LOOP
+        money := pack.all_money_of_build(bk_record.buildkey);
+        UPDATE buildings
+        SET
+            price_of_stuf = money
+        WHERE
+            buildkey = bk_record.buildkey;
+
+    END LOOP;
 END;
 /
+
+BEGIN
+    dbms_scheduler.create_job(
+                             job_name      => 'upd_price',
+                             program_name  => 'simple_program',
+                             schedule_name => 'simple_schedule',
+                             enabled       => true
+    );
+END;
+/
+
+BEGIN
+    dbms_scheduler.create_program(
+                                 program_name   => 'simple_program',
+                                 program_type   => 'STORED_PROCEDURE',
+                                 program_action => 'upd_price_of_stuff',
+                                 enabled        => true
+    );
+END;
+/
+
+BEGIN
+    dbms_scheduler.create_schedule(
+                                  schedule_name   => 'simple_schedule',
+                                  start_date      => systimestamp,
+                                  repeat_interval => 'FREQ=WEEkLY; BYDAY=MON'
+    );
+END;
+/
+
