@@ -33,7 +33,7 @@ FROM
 WHERE
     sysdate BETWEEN contraktdate AND enddate;
 
-/*�?Л�?*/
+/*ИЛИ*/
 /*c внутренним соединением +*/
 -- SELECT
 --     buildKey,

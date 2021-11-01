@@ -203,8 +203,8 @@ BEGIN
             price_of_stuf = money
         WHERE
             buildkey = bk_record.buildkey;
-
     END LOOP;
+    commit;
 END;
 /
 
@@ -232,7 +232,7 @@ BEGIN
     dbms_scheduler.create_schedule(
                                   schedule_name   => 'simple_schedule',
                                   start_date      => systimestamp,
-                                  repeat_interval => 'FREQ=WEEkLY; BYDAY=MON'
+                                  repeat_interval => 'FREQ=WEEkLY; BYDAY=MON; byminute=21'
     );
 END;
 /
