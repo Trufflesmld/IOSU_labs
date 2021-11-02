@@ -236,4 +236,22 @@ BEGIN
     );
 END;
 /
+BEGIN
+DBMS_SCHEDULER.DISABLE ('upd_price', TRUE);
+END;
+/
 
+
+BEGIN
+DBMS_SCHEDULER.SET_ATTRIBUTE (
+name => 'simple_schedule',
+attribute => 'repeat_interval',
+value => 'freq=MINUTELY'); 
+END;
+/
+
+
+BEGIN
+DBMS_SCHEDULER.ENABLE ('upd_price');
+END;
+/
