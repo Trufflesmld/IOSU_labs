@@ -10,8 +10,10 @@ CREATE OR REPLACE PROCEDURE new_object_bd (
     col_list  IN VARCHAR2,
     rec_count IN INTEGER
 ) IS
-    new_obj_name VARCHAR2(120);
-    select_rec   VARCHAR2(200);
+    new_obj_name    VARCHAR2(120);
+    select_rec      VARCHAR2(200);
+    counter_records INTEGER;
+    unique_id NUMBER;
 BEGIN
     IF upper(type_of) NOT IN ( 'VIEW', 'TABLE' ) THEN
         raise_application_error(
@@ -36,11 +38,26 @@ BEGIN
         );
     END IF;
 
+    EXECUTE IMMEDIATE 'SELECT count(1) FROM ' || ref_tab
+    INTO counter_records;
+    IF counter_records < rec_count THEN
+        raise_application_error(
+                               -20004,
+                               'У таблицы на данный момент существует '
+                               || counter_records
+                               || ' записей. Указано '
+                               || rec_count
+                               || ' записей'
+        );
+    END IF;
+
+unique_id := to_number(replace(to_char(sysdate-to_date('23.10.2000', 'dd.mm.yyyy')),'.'));
+
     new_obj_name := ref_tab
                     || '_'
                     || type_of
                     || '_'
-                    || dbms_session.unique_session_id;
+                    || unique_id;
 
     select_rec := 'SELECT '
                   || col_list
@@ -135,7 +152,7 @@ BEGIN
                  'table',
                  'buildings',
                  'buildkey, typeobj',
-                 1
+                 3
     );
 END;
 /
