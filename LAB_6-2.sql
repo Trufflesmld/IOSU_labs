@@ -26,12 +26,16 @@ BEGIN
                                'Таблицы не существует'
         );
     END IF;
-    IF NOT check_exist_column_in_table(ref_tab, col_list) THEN
+    IF NOT check_exist_column_in_table(
+                                      ref_tab,
+                                      col_list
+           ) THEN
         raise_application_error(
                                -20003,
                                'Не существует столбца'
         );
     END IF;
+
     new_obj_name := ref_tab
                     || '_'
                     || type_of
@@ -41,7 +45,10 @@ BEGIN
     select_rec := 'SELECT '
                   || col_list
                   || ' FROM '
-                  || ref_tab;
+                  || ref_tab
+                  || ' WHERE rownum = '
+                  || rec_count;
+
     CASE upper(type_of)
         WHEN 'VIEW' THEN
             select_rec := select_rec;
@@ -135,12 +142,11 @@ END;
 
 BEGIN
     IF check_exist_column_in_table(
-                                      'BUILDINGS',
-                                      'BUILDKEY, TYPEOBJ, hhahha'
-           ) THEN
+                                  'BUILDINGS',
+                                  'BUILDKEY, TYPEOBJ, hhahha'
+       ) THEN
         dbms_output.put_line('1+');
     END IF;
-
     IF NOT check_exist_column_in_table(
                                       'BUILDINGS',
                                       'kek'

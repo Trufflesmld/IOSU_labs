@@ -16,17 +16,25 @@ END;
 CREATE OR REPLACE PROCEDURE kek (
     str VARCHAR2
 ) IS
-     cur PLS_INTEGER := DBMS_SQL.OPEN_CURSOR;
-   cols DBMS_SQL.DESC_TAB;
-   ncols PLS_INTEGER;
+    cur   PLS_INTEGER := dbms_sql.open_cursor;
+    cols  dbms_sql.desc_tab;
+    ncols PLS_INTEGER;
 BEGIN
-    DBMS_SQL.PARSE (cur, str, DBMS_SQL.NATIVE);
-    DBMS_SQL.DESCRIBE_COLUMNS (cur, ncols, cols);
-    FOR colind IN 1 .. ncols
-   LOOP
-      DBMS_OUTPUT.PUT_LINE (cols (colind).col_name);
-   END LOOP;
-   DBMS_SQL.CLOSE_CURSOR (cur);
+    dbms_sql.parse(
+                  cur,
+                  str,
+                  dbms_sql.native
+    );
+    dbms_sql.describe_columns(
+                             cur,
+                             ncols,
+                             cols
+    );
+    FOR colind IN 1..ncols LOOP
+        dbms_output.put_line(cols(colind).col_name);
+    END LOOP;
+
+    dbms_sql.close_cursor(cur);
 EXCEPTION
     WHEN OTHERS THEN
         RAISE;
@@ -35,22 +43,14 @@ END kek;
 
 EXEC kek('select * from buildings');
 
-
-
-exec intab(table_in => 'BUILDINGS') 
-
-
-
-
-
-
+EXEC intab('buildings')
 
 CREATE OR REPLACE PROCEDURE intab (
-   table_in          IN   VARCHAR2
-  ,where_in          IN   VARCHAR2 DEFAULT NULL
-  ,colname_like_in   IN   VARCHAR2 := '%'
+    table_in        IN VARCHAR2,
+    where_in        IN VARCHAR2 DEFAULT NULL,
+    colname_like_in IN VARCHAR2 := '%'
 )
-AUTHID CURRENT_USER
+    AUTHID current_user
 /*
    "In Table" utility: use DBMS_SQL to implement a Method 4 dynamic SQL challenge.
 
@@ -109,168 +109,177 @@ AUTHID CURRENT_USER
 */
 IS
    -- Avoid repetitive "maximum size" declarations for VARCHAR2 variables.
-   SUBTYPE max_varchar2_t IS VARCHAR2 (32767);
+    SUBTYPE max_varchar2_t IS VARCHAR2(32767);
 
    -- Minimize size of a string column.
-   c_min_length   CONSTANT PLS_INTEGER    := 10;
+    c_min_length      CONSTANT PLS_INTEGER := 10;
 
    -- Collection to hold the column information for this table.
-   TYPE columns_tt IS TABLE OF all_tab_columns%ROWTYPE
-      INDEX BY PLS_INTEGER;
-
-   g_columns               columns_tt;
+    TYPE columns_tt IS
+        TABLE OF all_tab_columns%rowtype INDEX BY PLS_INTEGER;
+    g_columns         columns_tt;
    --
    -- Open a cursor for use by DBMS_SQL subprograms throughout this procedure.
-   g_cursor                INTEGER        := DBMS_SQL.open_cursor;
+    g_cursor          INTEGER := dbms_sql.open_cursor;
    --
    -- Formatting and SELECT elements used throughout the program.
-   g_header                max_varchar2_t;
-   g_select_list           max_varchar2_t;
-   g_row_line_length       INTEGER        := 0;
+    g_header          max_varchar2_t;
+    g_select_list     max_varchar2_t;
+    g_row_line_length INTEGER := 0;
 
    /* Utility functions that determine the "family" of the column datatype.
       They do NOT comprehensively cover the datatypes supported by Oracle.
      You will need to expand on these programs if you want your version of
      intab to support a wider range of datatypes.
    */
-   FUNCTION is_string (row_in IN INTEGER)
-      RETURN BOOLEAN
-   IS
-   BEGIN
-      RETURN (g_columns (row_in).data_type IN
-                                           ('CHAR', 'VARCHAR2', 'VARCHAR')
-             );
-   END;
+    FUNCTION is_string (
+        row_in IN INTEGER
+    ) RETURN BOOLEAN IS
+    BEGIN
+        RETURN ( g_columns(row_in).data_type IN ( 'CHAR', 'VARCHAR2', 'VARCHAR' ) );
+    END;
 
-   FUNCTION is_number (row_in IN INTEGER)
-      RETURN BOOLEAN
-   IS
-   BEGIN
-      RETURN (g_columns (row_in).data_type IN
-                                            ('FLOAT', 'INTEGER', 'NUMBER')
-             );
-   END;
+    FUNCTION is_number (
+        row_in IN INTEGER
+    ) RETURN BOOLEAN IS
+    BEGIN
+        RETURN ( g_columns(row_in).data_type IN ( 'FLOAT', 'INTEGER', 'NUMBER' ) );
+    END;
 
-   FUNCTION is_date (row_in IN INTEGER)
-      RETURN BOOLEAN
-   IS
-   BEGIN
-      RETURN (g_columns (row_in).data_type IN ('DATE', 'TIMESTAMP'));
-   END;
+    FUNCTION is_date (
+        row_in IN INTEGER
+    ) RETURN BOOLEAN IS
+    BEGIN
+        RETURN ( g_columns(row_in).data_type IN ( 'DATE', 'TIMESTAMP' ) );
+    END;
 
-   PROCEDURE load_column_information
-   IS
-      l_dot_location   PLS_INTEGER;
-      l_owner          VARCHAR2 (100);
-      l_table          VARCHAR2 (100);
-      l_index          PLS_INTEGER;
+    PROCEDURE load_column_information IS
+
+        l_dot_location PLS_INTEGER;
+        l_owner        VARCHAR2(100);
+        l_table        VARCHAR2(100);
+        l_index        PLS_INTEGER;
       --
-      no_such_table    EXCEPTION;
-      PRAGMA EXCEPTION_INIT (no_such_table, -942);
-   BEGIN
+        no_such_table EXCEPTION;
+        PRAGMA exception_init ( no_such_table, -942 );
+    BEGIN
       -- Separate the schema and table names, if both are present.
-      l_dot_location := INSTR (table_in, '.');
-
-      IF l_dot_location > 0
-      THEN
-         l_owner := SUBSTR (table_in, 1, l_dot_location - 1);
-         l_table := SUBSTR (table_in, l_dot_location + 1);
-      ELSE
-         l_owner := USER;
-         l_table := table_in;
-      END IF;
+        l_dot_location := instr(
+                               table_in,
+                               '.'
+                          );
+        IF l_dot_location > 0 THEN
+            l_owner := substr(
+                             table_in,
+                             1,
+                             l_dot_location - 1
+                       );
+            l_table := substr(
+                             table_in,
+                             l_dot_location + 1
+                       );
+        ELSE
+            l_owner := user;
+            l_table := table_in;
+        END IF;
 
       -- Retrieve all the column information into a collection of records.
-      SELECT *
-      BULK COLLECT INTO g_columns
-        FROM all_tab_columns
-       WHERE owner = l_owner
-         AND table_name = l_table
-         AND column_name LIKE NVL (colname_like_in, '%');
+        SELECT
+            *
+        BULK COLLECT
+        INTO g_columns
+        FROM
+            all_tab_columns
+        WHERE
+            owner = l_owner
+            AND table_name = upper(l_table)
+            AND column_name LIKE nvl(
+                colname_like_in, '%'
+            );
 
-      l_index := g_columns.FIRST;
-
-      IF l_index IS NULL
-      THEN
-         RAISE no_such_table;
-      ELSE
+        l_index := g_columns.first;
+        IF l_index IS NULL THEN
+            RAISE no_such_table;
+        ELSE
            /* Add each column to the select list, calculate the length needed
               to display each column, and also come up with the total line length.
            Again, please note that the datatype support here is quite limited.
          */
-         WHILE (l_index IS NOT NULL)
-         LOOP
-            IF g_select_list IS NULL
-            THEN
-               g_select_list := g_columns (l_index).column_name;
-            ELSE
-               g_select_list :=
-                  g_select_list || ', ' || g_columns (l_index).column_name;
-            END IF;
+            WHILE ( l_index IS NOT NULL ) LOOP
+                IF g_select_list IS NULL THEN
+                    g_select_list := g_columns(l_index).column_name;
+                ELSE
+                    g_select_list := g_select_list
+                                     || ', '
+                                     || g_columns(l_index).column_name;
+                END IF;
 
-            IF is_string (l_index)
-            THEN
-               g_columns (l_index).data_length :=
-                  GREATEST (LEAST (g_columns (l_index).data_length
-                                  ,c_min_length
-                                  )
-                           ,LENGTH (g_columns (l_index).column_name)
-                           );
-            ELSIF is_date (l_index)
-            THEN
-               g_columns (l_index).data_length :=
-                  GREATEST (c_min_length
-                           ,LENGTH (g_columns (l_index).column_name)
-                           );
-            ELSIF is_number (l_index)
-            THEN
-               g_columns (l_index).data_length :=
-                  GREATEST (NVL (g_columns (l_index).data_precision, 38)
-                           ,LENGTH (g_columns (l_index).column_name)
-                           );
-            END IF;
+                IF is_string(l_index) THEN
+                    g_columns(l_index).data_length := greatest(
+                                                              least(
+                                                                   g_columns(l_index).data_length,
+                                                                   c_min_length
+                                                              ),
+                                                              length(g_columns(l_index).column_name)
+                                                      );
 
-            g_row_line_length :=
-                    g_row_line_length + g_columns (l_index).data_length + 1;
+                ELSIF is_date(l_index) THEN
+                    g_columns(l_index).data_length := greatest(
+                                                              c_min_length,
+                                                              length(g_columns(l_index).column_name)
+                                                      );
+                ELSIF is_number(l_index) THEN
+                    g_columns(l_index).data_length := greatest(
+                                                              nvl(
+                                                                 g_columns(l_index).data_precision,
+                                                                 38
+                                                              ),
+                                                              length(g_columns(l_index).column_name)
+                                                      );
+                END IF;
+
+                g_row_line_length := g_row_line_length + g_columns(l_index).data_length + 1;
                --
             -- Construct column header line incrementally.
-            g_header :=
-                  g_header
-               || ' '
-               || RPAD (g_columns (l_index).column_name
-                       ,g_columns (l_index).data_length
-                       );
-            l_index := g_columns.NEXT (l_index);
-         END LOOP;
-      END IF;
-   END load_column_information;
+                g_header := g_header
+                            || ' '
+                            || rpad(
+                                   g_columns(l_index).column_name,
+                                   g_columns(l_index).data_length
+                               );
 
-   PROCEDURE construct_and_parse_query
-   IS
-      l_where_clause   max_varchar2_t := LTRIM (UPPER (where_in));
-      l_query          max_varchar2_t;
-   BEGIN
+                l_index := g_columns.next(l_index);
+            END LOOP;
+        END IF;
+
+    END load_column_information;
+
+    PROCEDURE construct_and_parse_query IS
+        l_where_clause max_varchar2_t := ltrim(upper(where_in));
+        l_query        max_varchar2_t;
+    BEGIN
       -- Construct a where clause if a value was specified.
-      IF l_where_clause IS NOT NULL
-      THEN
+        IF l_where_clause IS NOT NULL THEN
          --
-         IF (    l_where_clause NOT LIKE 'GROUP BY%'
-             AND l_where_clause NOT LIKE 'ORDER BY%'
-            )
-         THEN
-            l_where_clause := 'WHERE ' || LTRIM (l_where_clause, 'WHERE');
-         END IF;
-      END IF;
+            IF (
+                l_where_clause NOT LIKE 'GROUP BY%'
+                AND l_where_clause NOT LIKE 'ORDER BY%'
+            ) THEN
+                l_where_clause := 'WHERE ' || ltrim(
+                                                   l_where_clause,
+                                                   'WHERE'
+                                              );
+            END IF;
+        END IF;
 
       -- Assign the dynamic string to a local variable so that it can be
       -- easily used to report an error.
-      l_query :=
-            'SELECT '
-         || g_select_list
-         || '  FROM '
-         || table_in
-         || ' '
-         || l_where_clause;
+        l_query := 'SELECT '
+                   || g_select_list
+                   || '  FROM '
+                   || table_in
+                   || ' '
+                   || l_where_clause;
       /*
         DBMS_SQL.PARSE
 
@@ -282,20 +291,22 @@ IS
          use the native SQL parser for the current version of Oracle
          to parse the statement.
        */
-      DBMS_SQL.parse (g_cursor, l_query, DBMS_SQL.native);
-   EXCEPTION
-      WHEN OTHERS
-      THEN
-         DBMS_OUTPUT.put_line ('Error parsing query:');
-         DBMS_OUTPUT.put_line (l_query);
-         RAISE;
-   END construct_and_parse_query;
+        dbms_sql.parse(
+                      g_cursor,
+                      l_query,
+                      dbms_sql.native
+        );
+    EXCEPTION
+        WHEN OTHERS THEN
+            dbms_output.put_line('Error parsing query:');
+            dbms_output.put_line(l_query);
+            RAISE;
+    END construct_and_parse_query;
 
-   PROCEDURE define_columns_and_execute
-   IS
-      l_index      PLS_INTEGER;
-      l_feedback   PLS_INTEGER;
-   BEGIN
+    PROCEDURE define_columns_and_execute IS
+        l_index    PLS_INTEGER;
+        l_feedback PLS_INTEGER;
+    BEGIN
       /*
         DBMS_SQL.DEFINE_COLUMN
 
@@ -305,92 +316,99 @@ IS
          DBMS_SQL.DEFINE_COLUMN. With string types, I need to also specify
          the maximum length of the value.
       */
-      l_index := g_columns.FIRST;
+        l_index := g_columns.first;
+        WHILE ( l_index IS NOT NULL ) LOOP
+            IF is_string(l_index) THEN
+                dbms_sql.define_column(
+                                      g_cursor,
+                                      l_index,
+                                      'a',
+                                      g_columns(l_index).data_length
+                );
+            ELSIF is_number(l_index) THEN
+                dbms_sql.define_column(
+                                      g_cursor,
+                                      l_index,
+                                      1
+                );
+            ELSIF is_date(l_index) THEN
+                dbms_sql.define_column(
+                                      g_cursor,
+                                      l_index,
+                                      sysdate
+                );
+            END IF;
 
-      WHILE (l_index IS NOT NULL)
-      LOOP
-         IF is_string (l_index)
-         THEN
-            DBMS_SQL.define_column (g_cursor
-                                   ,l_index
-                                   ,'a'
-                                   ,g_columns (l_index).data_length
-                                   );
-         ELSIF is_number (l_index)
-         THEN
-            DBMS_SQL.define_column (g_cursor, l_index, 1);
-         ELSIF is_date (l_index)
-         THEN
-            DBMS_SQL.define_column (g_cursor, l_index, SYSDATE);
-         END IF;
+            l_index := g_columns.next(l_index);
+        END LOOP;
 
-         l_index := g_columns.NEXT (l_index);
-      END LOOP;
+        l_feedback := dbms_sql.execute(g_cursor);
+    END define_columns_and_execute;
 
-      l_feedback := DBMS_SQL.EXECUTE (g_cursor);
-   END define_columns_and_execute;
-
-   PROCEDURE build_and_display_output
-   IS
+    PROCEDURE build_and_display_output IS
       -- Used to hold the retrieved column values.
-      l_string_value     VARCHAR2 (2000);
-      l_number_value     NUMBER;
-      l_date_value       DATE;
+        l_string_value   VARCHAR2(2000);
+        l_number_value   NUMBER;
+        l_date_value     DATE;
       --
-      l_feedback         INTEGER;
-      l_index            PLS_INTEGER;
-      l_one_row_string   max_varchar2_t;
+        l_feedback       INTEGER;
+        l_index          PLS_INTEGER;
+        l_one_row_string max_varchar2_t;
 
       -- Formatting for the output of the header information
-      PROCEDURE display_header
-      IS
-         l_border   max_varchar2_t := RPAD ('-', g_row_line_length, '-');
+        PROCEDURE display_header IS
 
-         FUNCTION centered_string (
-            string_in   IN   VARCHAR2
-           ,length_in   IN   INTEGER
-         )
-            RETURN VARCHAR2
-         IS
-            len_string   INTEGER := LENGTH (string_in);
-         BEGIN
-            IF len_string IS NULL OR length_in <= 0
-            THEN
-               RETURN NULL;
-            ELSE
-               RETURN    RPAD (' ', (length_in - len_string) / 2 - 1)
-                      || LTRIM (RTRIM (string_in));
-            END IF;
-         END centered_string;
-      BEGIN
-         DBMS_OUTPUT.put_line (l_border);
-         DBMS_OUTPUT.put_line (centered_string ('Contents of ' || table_in
-                                               ,g_row_line_length
-                                               )
-                              );
-         DBMS_OUTPUT.put_line (l_border);
-         DBMS_OUTPUT.put_line (g_header);
-         DBMS_OUTPUT.put_line (l_border);
-      END display_header;
-   BEGIN
-      display_header;
+            l_border max_varchar2_t := rpad(
+                                           '-',
+                                           g_row_line_length,
+                                           '-'
+                                       );
+
+            FUNCTION centered_string (
+                string_in IN VARCHAR2,
+                length_in IN INTEGER
+            ) RETURN VARCHAR2 IS
+                len_string INTEGER := length(string_in);
+            BEGIN
+                IF len_string IS NULL OR length_in <= 0 THEN
+                    RETURN NULL;
+                ELSE
+                    RETURN rpad(
+                               ' ',
+                               (length_in - len_string) / 2 - 1
+                           )
+                           || ltrim(rtrim(string_in));
+                END IF;
+            END centered_string;
+
+        BEGIN
+            dbms_output.put_line(l_border);
+            dbms_output.put_line(centered_string(
+                                                'Contents of ' || table_in,
+                                                g_row_line_length
+                                 ));
+            dbms_output.put_line(l_border);
+            dbms_output.put_line(g_header);
+            dbms_output.put_line(l_border);
+        END display_header;
+
+    BEGIN
+        display_header;
 
       -- Fetch one row at a time, until the last has been fetched.
-      LOOP
+        LOOP
          /*
          DBMS_SQL.FETCH_ROWS
 
            Fetch a row, and return the numbers of rows fetched.
            When 0, we are done.
          */
-         l_feedback := DBMS_SQL.fetch_rows (g_cursor);
-         EXIT WHEN l_feedback = 0;
+            l_feedback := dbms_sql.fetch_rows(g_cursor);
+            EXIT WHEN l_feedback = 0;
          --
-         l_one_row_string := NULL;
-         l_index := g_columns.FIRST;
-
-         WHILE (l_index IS NOT NULL)
-         LOOP
+            l_one_row_string := NULL;
+            l_index := g_columns.first;
+            WHILE ( l_index IS NOT NULL ) LOOP
             /*
             DBMS_SQL.COLUMN_VALUE
 
@@ -399,58 +417,70 @@ IS
                then convert to a string and concatenate to the
                full line variable.
             */
-            IF is_string (l_index)
-            THEN
-               DBMS_SQL.column_value (g_cursor, l_index, l_string_value);
-            ELSIF is_number (l_index)
-            THEN
-               DBMS_SQL.column_value (g_cursor, l_index, l_number_value);
-               l_string_value := TO_CHAR (l_number_value);
-            ELSIF is_date (l_index)
-            THEN
-               DBMS_SQL.column_value (g_cursor, l_index, l_date_value);
-               l_string_value := TO_CHAR (l_date_value);
-            END IF;
+                IF is_string(l_index) THEN
+                    dbms_sql.column_value(
+                                         g_cursor,
+                                         l_index,
+                                         l_string_value
+                    );
+                ELSIF is_number(l_index) THEN
+                    dbms_sql.column_value(
+                                         g_cursor,
+                                         l_index,
+                                         l_number_value
+                    );
+                    l_string_value := to_char(l_number_value);
+                ELSIF is_date(l_index) THEN
+                    dbms_sql.column_value(
+                                         g_cursor,
+                                         l_index,
+                                         l_date_value
+                    );
+                    l_string_value := to_char(l_date_value);
+                END IF;
 
-            l_one_row_string :=
-                  l_one_row_string
-               || ' '
-               || RPAD (NVL (l_string_value, ' ')
-                       ,g_columns (l_index).data_length
-                       );
-            l_index := g_columns.NEXT (l_index);
-         END LOOP;
+                l_one_row_string := l_one_row_string
+                                    || ' '
+                                    || rpad(
+                                           nvl(
+                                              l_string_value,
+                                              ' '
+                                           ),
+                                           g_columns(l_index).data_length
+                                       );
 
-         DBMS_OUTPUT.put_line (l_one_row_string);
-      END LOOP;
-   END build_and_display_output;
+                l_index := g_columns.next(l_index);
+            END LOOP;
 
-   PROCEDURE cleanup
-   IS
-   BEGIN
+            dbms_output.put_line(l_one_row_string);
+        END LOOP;
+
+    END build_and_display_output;
+
+    PROCEDURE cleanup IS
+    BEGIN
       /*
         DBMS_SQL.CLOSE_CURSOR
 
        Make sure to close the cursor on both successful completion
          and when an error is raised.
       */
-      DBMS_SQL.close_cursor (g_cursor);
-   END cleanup;
+        dbms_sql.close_cursor(g_cursor);
+    END cleanup;
+
 BEGIN
    /*
       I keep the executable section small and very readable by creating
       a series of local subprograms to perform the tasks required.
    */
-   load_column_information;
-   construct_and_parse_query;
-   define_columns_and_execute;
-   build_and_display_output;
-   cleanup;
+    load_column_information;
+    construct_and_parse_query;
+    define_columns_and_execute;
+    build_and_display_output;
+    cleanup;
 EXCEPTION
-   WHEN OTHERS
-   THEN
-      cleanup;
-      RAISE;
+    WHEN OTHERS THEN
+        cleanup;
+        RAISE;
 END intab;
 /
-
