@@ -10,10 +10,9 @@ CREATE OR REPLACE PROCEDURE new_object_bd (
     col_list  IN VARCHAR2,
     rec_count IN INTEGER
 ) IS
-    new_obj_name    VARCHAR2(120);
+    new_obj_name    VARCHAR2(100);
     select_rec      VARCHAR2(200);
     counter_records INTEGER;
-    unique_id       NUMBER;
 BEGIN
     IF upper(type_of) NOT IN ( 'VIEW', 'TABLE' ) THEN
         raise_application_error(
@@ -51,21 +50,15 @@ BEGIN
         );
     END IF;
 
-    unique_id := to_number(replace(
-                                  to_char(sysdate - TO_DATE('23.10.2000', 'dd.mm.yyyy')),
-                                  '.'
-                           ));
-
-    new_obj_name := ref_tab
-                    || '_'
-                    || type_of
-                    || '_'
-                    || unique_id;
+    new_obj_name := create_unique_name(
+                                      ref_tab,
+                                      type_of
+                    );
     select_rec := 'SELECT '
                   || col_list
                   || ' FROM '
                   || ref_tab
-                  || ' WHERE rownum = '
+                  || ' WHERE rownum <= '
                   || rec_count;
 
     CASE upper(type_of)
