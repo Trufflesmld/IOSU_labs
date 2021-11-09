@@ -13,7 +13,7 @@ CREATE OR REPLACE PROCEDURE new_object_bd (
     new_obj_name    VARCHAR2(120);
     select_rec      VARCHAR2(200);
     counter_records INTEGER;
-    unique_id NUMBER;
+    unique_id       NUMBER;
 BEGIN
     IF upper(type_of) NOT IN ( 'VIEW', 'TABLE' ) THEN
         raise_application_error(
@@ -51,14 +51,16 @@ BEGIN
         );
     END IF;
 
-unique_id := to_number(replace(to_char(sysdate-to_date('23.10.2000', 'dd.mm.yyyy')),'.'));
+    unique_id := to_number(replace(
+                                  to_char(sysdate - TO_DATE('23.10.2000', 'dd.mm.yyyy')),
+                                  '.'
+                           ));
 
     new_obj_name := ref_tab
                     || '_'
                     || type_of
                     || '_'
                     || unique_id;
-
     select_rec := 'SELECT '
                   || col_list
                   || ' FROM '
