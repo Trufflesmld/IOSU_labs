@@ -56,14 +56,15 @@ CREATE OR REPLACE PROCEDURE parent_child_tab (
     parent_tab IN VARCHAR2,
     child_tab  IN VARCHAR2
 ) IS
-rec_select VARCHAR2(200);
-    select_rec_parent VARCHAR2(200);
-    select_rec_child  VARCHAR2(200);
-    table_name        VARCHAR2(100);
-    type_object_name  VARCHAR2(100);
-    type_table_name   VARCHAR2(100);
-    column_name       VARCHAR2(100);
-    ref_column        VARCHAR2(100);
+
+    query_str_cursor_data_child VARCHAR2(200);
+    select_rec_parent           VARCHAR2(200);
+    select_rec_child            VARCHAR2(200);
+    table_name                  VARCHAR2(100);
+    type_object_name            VARCHAR2(100);
+    type_table_name             VARCHAR2(100);
+    column_name                 VARCHAR2(100);
+    ref_column                  VARCHAR2(100);
     CURSOR tab_columns_curs IS
     SELECT
         column_name,
@@ -73,7 +74,7 @@ rec_select VARCHAR2(200);
         user_tab_columns
     WHERE
         table_name = upper(child_tab);
-TYPE ref_cur IS REF CURSOR;
+
 BEGIN
     IF NOT check_exist_table(parent_tab) OR NOT check_exist_table(child_tab) THEN
         raise_application_error(
@@ -134,7 +135,7 @@ BEGIN
                       || ' is OBJECT ( '
                       || select_rec_child
                       || ' )';
-    -- Создание записи чтобы создать объект с записями из дочерней
+    -- Создание таблицы на основе объекта
     type_table_name := create_unique_name(
                                          child_tab,
                                          'type_table'
@@ -143,6 +144,7 @@ BEGIN
                       || type_table_name
                       || ' is TABLE OF '
                       || type_object_name;
+
     -- Добавления поля коллекции в новую таблицу
     column_name := child_tab || '_column';
     EXECUTE IMMEDIATE 'ALTER TABLE '
@@ -170,57 +172,73 @@ BEGIN
                             AND cons.table_name = upper(:child)
                             AND cons_r.table_name = upper(:parent)'
     INTO ref_column  --Поле по которому связаны таблицы
-        USING child_tab, parent_tab; 
+        USING child_tab, parent_tab;
+    EXECUTE IMMEDIATE 'DECLARE '
+                      || 'copy_'
+                      || child_tab
+                      || ' '
+                      || type_table_name
+                      || ';'
+                      || ' CURSOR curs_child IS SELECT '
+                      || ref_column
+                      || ' FROM '
+                      || child_tab
+                      || ' GROUP BY '
+                      || ref_column
+                      || ';'
+                      || ' BEGIN FOR cur IN curs_child LOOP SELECT CAST(MULTISET(SELECT * FROM '
+                      || child_tab
+                      || ' WHERE '
+                      || ref_column
+                      || ' = cur.'
+                      || ref_column
+                      || ') AS '
+                      || type_table_name
+                      || ') INTO copy_'
+                      || child_tab
+                      || ' FROM dual; '
+                      || 'UPDATE '
+                      || table_name
+                      || ' SET '
+                      || column_name
+                      || ' = '
+                      || 'copy_'
+                      || child_tab
+                      || ' WHERE '
+                      || ref_column
+                      || ' = '
+                      || 'cur.'
+                      || ref_column
+                      || '; END LOOP; COMMIT; END;';
+
 END;
 /
 
 BEGIN
     parent_child_tab(
-                    'TEAMS',
-                    'Buildings'
+                    'teams',
+                    'buildings'
     );
 END;
 /
 
--- UPDATE teams_buildings_7688005451388888888888888888888888888889
--- SET
---     buildings = buildings_type_table_7688005451388888888888888888888888888889(
---         buildings_type_object_7688005451388888888888888888888888888889(
---             1, 'Тип2', 2, 2, TO_DATE('24.03.21', 'dd.mm.yy'), TO_DATE('17.07.2021', 'dd.mm.yy'), 1000.75, 11
---         ),
---         buildings_type_object_7688005451388888888888888888888888888889(
---             1, 'Тип2', 2, 2, TO_DATE('24.03.21', 'dd.mm.yy'), TO_DATE('17.07.2021', 'dd.mm.yy'), 1000.75, 18
---         )
---     )
--- WHERE
---     teamkey = 1;
 
--- SELECT
---     column_name,
---     data_type,
---     data_length
--- FROM
---     user_tab_columns
--- WHERE
---     table_name = 'BUILDINGS';
-
+  
 -- SELECT
 --     t.teamkey,
 --     t.lead,
 --     t.strength,
 --     cc.*
 -- FROM
---     teams_buildings_7688005451388888888888888888888888888889 t,
---     TABLE ( t.buildings )                                    cc;
+--     teams_buildings_7688855173611111111111111111111111111111 t,
+--     TABLE ( t.buildings_column )                                    cc;
+-- SELECT
+--     t.*,
+--     cc.*
+-- FROM
+--     STAGES_STAGE_STUFF_768891369212962962962962962962962962963 t,
+--     TABLE ( t.STAGE_STUFF_COLUMN )                                    cc;
 
-SELECT
-    cols_r.column_name r_column_name
-FROM
-    user_constraints  cons
-    LEFT JOIN user_cons_columns cols ON cols.constraint_name = cons.constraint_name
-    LEFT JOIN user_constraints  cons_r ON cons_r.constraint_name = cons.r_constraint_name
-    LEFT JOIN user_cons_columns cols_r ON cols_r.constraint_name = cons.r_constraint_name
-WHERE
-    cons.constraint_type = 'R'
-    AND cons.table_name = ':child'
-    AND cons_r.table_name = ':parent';
+
+
+
