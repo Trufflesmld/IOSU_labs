@@ -211,6 +211,7 @@ BEGIN
                       || ref_column
                       || '; END LOOP; COMMIT; END;';
 
+    dbms_output.put_line('Uмя итоговой таблицы ' || table_name);
 END;
 /
 
@@ -238,7 +239,3 @@ END;
 -- FROM
 --     STAGES_STAGE_STUFF_768891369212962962962962962962962962963 t,
 --     TABLE ( t.STAGE_STUFF_COLUMN )                                    cc;
-
-
-
-
