@@ -56,13 +56,14 @@ CREATE OR REPLACE PROCEDURE parent_child_tab (
     parent_tab IN VARCHAR2,
     child_tab  IN VARCHAR2
 ) IS
-
+rec_select VARCHAR2(200);
     select_rec_parent VARCHAR2(200);
     select_rec_child  VARCHAR2(200);
     table_name        VARCHAR2(100);
     type_object_name  VARCHAR2(100);
     type_table_name   VARCHAR2(100);
     column_name       VARCHAR2(100);
+    ref_column        VARCHAR2(100);
     CURSOR tab_columns_curs IS
     SELECT
         column_name,
@@ -72,8 +73,7 @@ CREATE OR REPLACE PROCEDURE parent_child_tab (
         user_tab_columns
     WHERE
         table_name = upper(child_tab);
-
-    TYPE ref_curs IS REF CURSOR;
+TYPE ref_cur IS REF CURSOR;
 BEGIN
     IF NOT check_exist_table(parent_tab) OR NOT check_exist_table(child_tab) THEN
         raise_application_error(
@@ -158,7 +158,19 @@ BEGIN
                       || '_'
                       || column_name;
     -- Заполнение
-
+    EXECUTE IMMEDIATE 'SELECT
+                            cols_r.column_name r_column_name
+                        FROM
+                            user_constraints  cons
+                        LEFT JOIN user_cons_columns cols ON cols.constraint_name = cons.constraint_name
+                        LEFT JOIN user_constraints  cons_r ON cons_r.constraint_name = cons.r_constraint_name
+                        LEFT JOIN user_cons_columns cols_r ON cols_r.constraint_name = cons.r_constraint_name
+                        WHERE
+                            cons.constraint_type = ''R''
+                            AND cons.table_name = upper(:child)
+                            AND cons_r.table_name = upper(:parent)'
+    INTO ref_column  --Поле по которому связаны таблицы
+        USING child_tab, parent_tab; 
 END;
 /
 
@@ -200,3 +212,15 @@ END;
 -- FROM
 --     teams_buildings_7688005451388888888888888888888888888889 t,
 --     TABLE ( t.buildings )                                    cc;
+
+SELECT
+    cols_r.column_name r_column_name
+FROM
+    user_constraints  cons
+    LEFT JOIN user_cons_columns cols ON cols.constraint_name = cons.constraint_name
+    LEFT JOIN user_constraints  cons_r ON cons_r.constraint_name = cons.r_constraint_name
+    LEFT JOIN user_cons_columns cols_r ON cols_r.constraint_name = cons.r_constraint_name
+WHERE
+    cons.constraint_type = 'R'
+    AND cons.table_name = ':child'
+    AND cons_r.table_name = ':parent';
