@@ -3,484 +3,150 @@
 --* Предусмотреть возможность вывода разных результатов, в зависимости от количества передаваемых параметров.
 --!-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-CREATE PROCEDURE random_select (
-    param1 IN NUMBER
+CREATE OR REPLACE PROCEDURE random_select (
+    name_tab  IN VARCHAR2,
+    col_list  IN VARCHAR2 DEFAULT NULL,
+    where_str IN VARCHAR2 DEFAULT NULL
 ) IS
-    varsum NUMBER;
-BEGIN
-    NULL;
-END;
-/
 
-CREATE OR REPLACE PROCEDURE kek (
-    str VARCHAR2
-) IS
-    cur   PLS_INTEGER := dbms_sql.open_cursor;
-    cols  dbms_sql.desc_tab;
-    ncols PLS_INTEGER;
-BEGIN
-    dbms_sql.parse(
-                  cur,
-                  str,
-                  dbms_sql.native
-    );
-    dbms_sql.describe_columns(
-                             cur,
-                             ncols,
-                             cols
-    );
-    FOR colind IN 1..ncols LOOP
-        dbms_output.put_line(cols(colind).col_name);
-    END LOOP;
-
-    dbms_sql.close_cursor(cur);
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE;
-END kek;
-/
-
-EXEC kek('select * from buildings');
-
-EXEC intab('buildings')
-
-CREATE OR REPLACE PROCEDURE intab (
-    table_in        IN VARCHAR2,
-    where_in        IN VARCHAR2 DEFAULT NULL,
-    colname_like_in IN VARCHAR2 := '%'
-)
-    AUTHID current_user
-/*
-   "In Table" utility: use DBMS_SQL to implement a Method 4 dynamic SQL challenge.
-
-   Author: Steven Feuerstein, steven@stevenfeuerstein.com
-   Date: July 2005
-
-   You have my permission to use the code found in this program for your own use.
-
-   Overview:
-
-   Show the rows of the table specified by the table name and optional where clause.
-
-   This is more of a prototype than a production-quality utility; its main purpose
-   is to provide a demonstration of the steps you must go through to implement
-   Method 4 dynamic SQL with DBMS_SQL.
-
-   Method 4 means that at the time you are writing your program, you either don't
-   know the number and types of columns being selected or you don't know the
-   number of bind variables in the dynamic string.
-
-   In this case, since the user can supply the table name, we have no way of knowing
-   which columns (and how many) will need to be selected. We will get the column
-   information from ALL_TAB_COLUMNS and then use that to drive the dynamic SQL
-   processing with DBMS_SQL.
-
-   Note: in most cases, you will want to use Native Dynamic SQL for dynamic SQL
-   requirements. DBMS_SQL is, however, very well suited to implementing Method 4.
-
-   Parameters:
-
-      table_in - name of the table or view, in the from schema.table or table.
-
-      where_in - optional where clause. Do not include the WHERE keyword. If, however,
-                 you start the where clause with ORDER BY or GROUP BY, then that
-                 entire string will be added to the query. Your where clause could
-                 also contain an ORDER BY or GROUP BY after the where clause.
-
-      colname_like_in - an optional filter that is applied to the set of columns
-                       to restrict which columns are displayed. A NULL value is
-                  treated as "%" - all columns.
-
-   Requirements:
-
-   * Oracle91 Database or higher: intab BULK COLLECTs into a collection of records.
-
-   Restrictions of functionality in intab:
-
-   * Prior to Oracle Database 10g Release 2, The contents of a row, converted to
-     a string, cannot be longer than 255 characters. In Oracle10g Database Release 2,
-     up to 32767 characters are supported.
-
-   * Datatypes of columns must be string, number or date -- or be of a type that can
-     implicitly converted to one of these types.
-
-   * Does not support table or column names that contain double quotes.
-*/
-IS
-   -- Avoid repetitive "maximum size" declarations for VARCHAR2 variables.
-    SUBTYPE max_varchar2_t IS VARCHAR2(32767);
-
-   -- Minimize size of a string column.
-    c_min_length      CONSTANT PLS_INTEGER := 10;
-
-   -- Collection to hold the column information for this table.
+    where_str_close  VARCHAR2(500);
+    query_string     VARCHAR2(500);
+    columns_str      VARCHAR2(100);
+    v_cursor_id      INTEGER;
+    l_feedback       INTEGER;
+    col_value        VARCHAR2(2000);
+    l_number_value   NUMBER;
+    l_date_value     DATE;
+    l_one_row_string VARCHAR2(2000);
+    header           VARCHAR2(2000);
+    l_tablen         BINARY_INTEGER;
+    l_tab            dbms_utility.uncl_array;
     TYPE columns_tt IS
-        TABLE OF all_tab_columns%rowtype INDEX BY PLS_INTEGER;
-    g_columns         columns_tt;
-   --
-   -- Open a cursor for use by DBMS_SQL subprograms throughout this procedure.
-    g_cursor          INTEGER := dbms_sql.open_cursor;
-   --
-   -- Formatting and SELECT elements used throughout the program.
-    g_header          max_varchar2_t;
-    g_select_list     max_varchar2_t;
-    g_row_line_length INTEGER := 0;
-
-   /* Utility functions that determine the "family" of the column datatype.
-      They do NOT comprehensively cover the datatypes supported by Oracle.
-     You will need to expand on these programs if you want your version of
-     intab to support a wider range of datatypes.
-   */
-    FUNCTION is_string (
-        row_in IN INTEGER
-    ) RETURN BOOLEAN IS
-    BEGIN
-        RETURN ( g_columns(row_in).data_type IN ( 'CHAR', 'VARCHAR2', 'VARCHAR' ) );
-    END;
-
-    FUNCTION is_number (
-        row_in IN INTEGER
-    ) RETURN BOOLEAN IS
-    BEGIN
-        RETURN ( g_columns(row_in).data_type IN ( 'FLOAT', 'INTEGER', 'NUMBER' ) );
-    END;
-
-    FUNCTION is_date (
-        row_in IN INTEGER
-    ) RETURN BOOLEAN IS
-    BEGIN
-        RETURN ( g_columns(row_in).data_type IN ( 'DATE', 'TIMESTAMP' ) );
-    END;
-
-    PROCEDURE load_column_information IS
-
-        l_dot_location PLS_INTEGER;
-        l_owner        VARCHAR2(100);
-        l_table        VARCHAR2(100);
-        l_index        PLS_INTEGER;
-      --
-        no_such_table EXCEPTION;
-        PRAGMA exception_init ( no_such_table, -942 );
-    BEGIN
-      -- Separate the schema and table names, if both are present.
-        l_dot_location := instr(
-                               table_in,
-                               '.'
-                          );
-        IF l_dot_location > 0 THEN
-            l_owner := substr(
-                             table_in,
-                             1,
-                             l_dot_location - 1
-                       );
-            l_table := substr(
-                             table_in,
-                             l_dot_location + 1
-                       );
-        ELSE
-            l_owner := user;
-            l_table := table_in;
-        END IF;
-
-      -- Retrieve all the column information into a collection of records.
+        TABLE OF all_tab_columns.column_name%TYPE INDEX BY PLS_INTEGER;
+    columns_arr      columns_tt;
+BEGIN
+    IF NOT check_exist_table(name_tab) THEN
+        raise_application_error(
+                               -20002,
+                               'Таблицы не существует'
+        );
+    END IF;
+    query_string := 'FROM ' || name_tab;
+    IF col_list IS NULL THEN
         SELECT
-            *
+            column_name
         BULK COLLECT
-        INTO g_columns
+        INTO columns_arr
         FROM
             all_tab_columns
         WHERE
-            owner = l_owner
-            AND table_name = upper(l_table)
-            AND column_name LIKE nvl(
-                colname_like_in, '%'
+            owner = user
+            AND table_name = upper(name_tab);
+
+        columns_str := NULL;
+        FOR i IN columns_arr.first..columns_arr.last LOOP
+            columns_str := columns_str
+                           || columns_arr(i)
+                           || ', ';
+        END LOOP;
+
+        columns_str := trim(TRAILING ',' FROM trim(TRAILING ' ' FROM columns_str));
+    ELSE
+        IF NOT check_exist_column_in_table(
+                                          name_tab,
+                                          col_list
+               ) THEN
+            raise_application_error(
+                                   -20003,
+                                   'Не существует столбца'
             );
-
-        l_index := g_columns.first;
-        IF l_index IS NULL THEN
-            RAISE no_such_table;
-        ELSE
-           /* Add each column to the select list, calculate the length needed
-              to display each column, and also come up with the total line length.
-           Again, please note that the datatype support here is quite limited.
-         */
-            WHILE ( l_index IS NOT NULL ) LOOP
-                IF g_select_list IS NULL THEN
-                    g_select_list := g_columns(l_index).column_name;
-                ELSE
-                    g_select_list := g_select_list
-                                     || ', '
-                                     || g_columns(l_index).column_name;
-                END IF;
-
-                IF is_string(l_index) THEN
-                    g_columns(l_index).data_length := greatest(
-                                                              least(
-                                                                   g_columns(l_index).data_length,
-                                                                   c_min_length
-                                                              ),
-                                                              length(g_columns(l_index).column_name)
-                                                      );
-
-                ELSIF is_date(l_index) THEN
-                    g_columns(l_index).data_length := greatest(
-                                                              c_min_length,
-                                                              length(g_columns(l_index).column_name)
-                                                      );
-                ELSIF is_number(l_index) THEN
-                    g_columns(l_index).data_length := greatest(
-                                                              nvl(
-                                                                 g_columns(l_index).data_precision,
-                                                                 38
-                                                              ),
-                                                              length(g_columns(l_index).column_name)
-                                                      );
-                END IF;
-
-                g_row_line_length := g_row_line_length + g_columns(l_index).data_length + 1;
-               --
-            -- Construct column header line incrementally.
-                g_header := g_header
-                            || ' '
-                            || rpad(
-                                   g_columns(l_index).column_name,
-                                   g_columns(l_index).data_length
-                               );
-
-                l_index := g_columns.next(l_index);
-            END LOOP;
         END IF;
 
-    END load_column_information;
+        columns_str := col_list;
+    END IF;
 
-    PROCEDURE construct_and_parse_query IS
-        l_where_clause max_varchar2_t := ltrim(upper(where_in));
-        l_query        max_varchar2_t;
-    BEGIN
-      -- Construct a where clause if a value was specified.
-        IF l_where_clause IS NOT NULL THEN
-         --
-            IF (
-                l_where_clause NOT LIKE 'GROUP BY%'
-                AND l_where_clause NOT LIKE 'ORDER BY%'
-            ) THEN
-                l_where_clause := 'WHERE ' || ltrim(
-                                                   l_where_clause,
-                                                   'WHERE'
-                                              );
-            END IF;
+    dbms_utility.comma_to_table(
+                               list   => columns_str,
+                               tablen => l_tablen,
+                               tab    => l_tab
+    );
+
+    query_string := 'SELECT '
+                    || columns_str
+                    || ' '
+                    || query_string;
+    where_str_close := ltrim(upper(where_str));
+    IF where_str_close IS NOT NULL THEN
+        IF (
+            where_str_close NOT LIKE 'GROUP BY%'
+            AND where_str_close NOT LIKE 'ORDER BY%'
+        ) THEN
+            where_str_close := 'WHERE ' || ltrim(
+                                                where_str_close,
+                                                'WHERE'
+                                           );
         END IF;
+    END IF;
 
-      -- Assign the dynamic string to a local variable so that it can be
-      -- easily used to report an error.
-        l_query := 'SELECT '
-                   || g_select_list
-                   || '  FROM '
-                   || table_in
-                   || ' '
-                   || l_where_clause;
-      /*
-        DBMS_SQL.PARSE
-
-         Parse the SELECT statement; it is a very generic one, combining
-         the list of columns drawn from ALL_TAB_COLUMNS, the table name
-         provided by the user, and the optional where clause.
-
-         Use the DBMS_SQL.NATIVE constant to indicate that DBMS_SQL should
-         use the native SQL parser for the current version of Oracle
-         to parse the statement.
-       */
-        dbms_sql.parse(
-                      g_cursor,
-                      l_query,
-                      dbms_sql.native
+    query_string := query_string
+                    || ' '
+                    || where_str_close;
+    query_string := upper(query_string);
+    v_cursor_id := dbms_sql.open_cursor;
+    dbms_sql.parse(
+                  v_cursor_id,
+                  query_string,
+                  dbms_sql.native
+    );
+    FOR i IN 1..l_tablen LOOP
+        dbms_sql.define_column(
+                              v_cursor_id,
+                              i,
+                              'a',
+                              20
         );
-    EXCEPTION
-        WHEN OTHERS THEN
-            dbms_output.put_line('Error parsing query:');
-            dbms_output.put_line(l_query);
-            RAISE;
-    END construct_and_parse_query;
+    END LOOP;
 
-    PROCEDURE define_columns_and_execute IS
-        l_index    PLS_INTEGER;
-        l_feedback PLS_INTEGER;
-    BEGIN
-      /*
-        DBMS_SQL.DEFINE_COLUMN
+    FOR i IN 1..l_tablen LOOP
+        header := header
+                  || ' | '
+                  || trim(l_tab(i));
+    END LOOP;
 
-         Before executing the query, I need to tell DBMS_SQL the datatype
-         of each the columns being selected in the query. I simply pass
-         a literal of the appropriate type to an overloading of
-         DBMS_SQL.DEFINE_COLUMN. With string types, I need to also specify
-         the maximum length of the value.
-      */
-        l_index := g_columns.first;
-        WHILE ( l_index IS NOT NULL ) LOOP
-            IF is_string(l_index) THEN
-                dbms_sql.define_column(
-                                      g_cursor,
-                                      l_index,
-                                      'a',
-                                      g_columns(l_index).data_length
-                );
-            ELSIF is_number(l_index) THEN
-                dbms_sql.define_column(
-                                      g_cursor,
-                                      l_index,
-                                      1
-                );
-            ELSIF is_date(l_index) THEN
-                dbms_sql.define_column(
-                                      g_cursor,
-                                      l_index,
-                                      sysdate
-                );
-            END IF;
-
-            l_index := g_columns.next(l_index);
+    dbms_output.put_line('Uнформация таблицы ' || name_tab);
+    dbms_output.put_line(header || ' |');
+    l_feedback := dbms_sql.execute(v_cursor_id);
+    LOOP
+        l_one_row_string := '';
+        l_feedback := dbms_sql.fetch_rows(v_cursor_id);
+        EXIT WHEN l_feedback = 0;
+        FOR i IN 1..l_tablen LOOP
+            dbms_sql.column_value(
+                                 v_cursor_id,
+                                 i,
+                                 col_value
+            );
+            col_value := to_char(col_value);
+            l_one_row_string := l_one_row_string
+                                || ' | '
+                                || col_value;
         END LOOP;
 
-        l_feedback := dbms_sql.execute(g_cursor);
-    END define_columns_and_execute;
+        dbms_output.put_line(l_one_row_string || ' |');
+    END LOOP;
 
-    PROCEDURE build_and_display_output IS
-      -- Used to hold the retrieved column values.
-        l_string_value   VARCHAR2(2000);
-        l_number_value   NUMBER;
-        l_date_value     DATE;
-      --
-        l_feedback       INTEGER;
-        l_index          PLS_INTEGER;
-        l_one_row_string max_varchar2_t;
-
-      -- Formatting for the output of the header information
-        PROCEDURE display_header IS
-
-            l_border max_varchar2_t := rpad(
-                                           '-',
-                                           g_row_line_length,
-                                           '-'
-                                       );
-
-            FUNCTION centered_string (
-                string_in IN VARCHAR2,
-                length_in IN INTEGER
-            ) RETURN VARCHAR2 IS
-                len_string INTEGER := length(string_in);
-            BEGIN
-                IF len_string IS NULL OR length_in <= 0 THEN
-                    RETURN NULL;
-                ELSE
-                    RETURN rpad(
-                               ' ',
-                               (length_in - len_string) / 2 - 1
-                           )
-                           || ltrim(rtrim(string_in));
-                END IF;
-            END centered_string;
-
-        BEGIN
-            dbms_output.put_line(l_border);
-            dbms_output.put_line(centered_string(
-                                                'Contents of ' || table_in,
-                                                g_row_line_length
-                                 ));
-            dbms_output.put_line(l_border);
-            dbms_output.put_line(g_header);
-            dbms_output.put_line(l_border);
-        END display_header;
-
-    BEGIN
-        display_header;
-
-      -- Fetch one row at a time, until the last has been fetched.
-        LOOP
-         /*
-         DBMS_SQL.FETCH_ROWS
-
-           Fetch a row, and return the numbers of rows fetched.
-           When 0, we are done.
-         */
-            l_feedback := dbms_sql.fetch_rows(g_cursor);
-            EXIT WHEN l_feedback = 0;
-         --
-            l_one_row_string := NULL;
-            l_index := g_columns.first;
-            WHILE ( l_index IS NOT NULL ) LOOP
-            /*
-            DBMS_SQL.COLUMN_VALUE
-
-               Retrieve each column value in the current row,
-               deposit it into a variable of the appropriate type,
-               then convert to a string and concatenate to the
-               full line variable.
-            */
-                IF is_string(l_index) THEN
-                    dbms_sql.column_value(
-                                         g_cursor,
-                                         l_index,
-                                         l_string_value
-                    );
-                ELSIF is_number(l_index) THEN
-                    dbms_sql.column_value(
-                                         g_cursor,
-                                         l_index,
-                                         l_number_value
-                    );
-                    l_string_value := to_char(l_number_value);
-                ELSIF is_date(l_index) THEN
-                    dbms_sql.column_value(
-                                         g_cursor,
-                                         l_index,
-                                         l_date_value
-                    );
-                    l_string_value := to_char(l_date_value);
-                END IF;
-
-                l_one_row_string := l_one_row_string
-                                    || ' '
-                                    || rpad(
-                                           nvl(
-                                              l_string_value,
-                                              ' '
-                                           ),
-                                           g_columns(l_index).data_length
-                                       );
-
-                l_index := g_columns.next(l_index);
-            END LOOP;
-
-            dbms_output.put_line(l_one_row_string);
-        END LOOP;
-
-    END build_and_display_output;
-
-    PROCEDURE cleanup IS
-    BEGIN
-      /*
-        DBMS_SQL.CLOSE_CURSOR
-
-       Make sure to close the cursor on both successful completion
-         and when an error is raised.
-      */
-        dbms_sql.close_cursor(g_cursor);
-    END cleanup;
-
-BEGIN
-   /*
-      I keep the executable section small and very readable by creating
-      a series of local subprograms to perform the tasks required.
-   */
-    load_column_information;
-    construct_and_parse_query;
-    define_columns_and_execute;
-    build_and_display_output;
-    cleanup;
+    dbms_sql.close_cursor(v_cursor_id);
 EXCEPTION
     WHEN OTHERS THEN
-        cleanup;
+        dbms_sql.close_cursor(v_cursor_id);
         RAISE;
-END intab;
+END;
+/
+
+BEGIN
+    random_select(
+                 name_tab  => 'buildings',
+                 where_str => 'order by buildkey'
+    );
+END;
 /
