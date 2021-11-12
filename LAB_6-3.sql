@@ -54,7 +54,7 @@ END;
 
 BEGIN
     stat_proc(
-             'buildings',
+             'z',
              'contractprice'
     );
 END;
