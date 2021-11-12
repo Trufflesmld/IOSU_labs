@@ -4,6 +4,40 @@
 --* в котором при переносе данных помещаются все связанные записи из дочерней таблицы.
 --!--------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+CREATE OR REPLACE FUNCTION check_bind (
+    tab_1 IN VARCHAR2,
+    tab_2 IN VARCHAR2
+) RETURN VARCHAR2 IS
+    spis_tab VARCHAR2(100) DEFAULT NULL;
+BEGIN
+    IF check_one_to_many(
+                        tab_1,
+                        tab_2
+       ) THEN
+        spis_tab := tab_1
+                    || ', '
+                    || tab_2;
+    END IF;
+
+    IF check_one_to_many(
+                        tab_2,
+                        tab_1
+       ) THEN
+        spis_tab := tab_2
+                    || ', '
+                    || tab_1;
+    END IF;
+
+    IF spis_tab IS NULL THEN
+        raise_application_error(
+                               -20999,
+                               'Нет связи'
+        );
+    END IF;
+    RETURN spis_tab;
+END;
+/
+
 CREATE OR REPLACE FUNCTION check_one_to_many (
     parent_tab IN VARCHAR2,
     child_tab  IN VARCHAR2
@@ -53,10 +87,15 @@ END;
 /
 
 CREATE OR REPLACE PROCEDURE parent_child_tab (
-    parent_tab IN VARCHAR2,
-    child_tab  IN VARCHAR2
+    tab_1 IN VARCHAR2,
+    tab_2 IN VARCHAR2
 ) IS
 
+    parent_tab                  VARCHAR2(100);
+    child_tab                   VARCHAR2(100);
+    list_tab                    VARCHAR2(100);
+    l_tablen                    BINARY_INTEGER;
+    l_tab                       dbms_utility.uncl_array;
     query_str_cursor_data_child VARCHAR2(200);
     select_rec_parent           VARCHAR2(200);
     select_rec_child            VARCHAR2(200);
@@ -76,23 +115,25 @@ CREATE OR REPLACE PROCEDURE parent_child_tab (
         table_name = upper(child_tab);
 
 BEGIN
-    IF NOT check_exist_table(parent_tab) OR NOT check_exist_table(child_tab) THEN
+    IF NOT check_exist_table(tab_1) OR NOT check_exist_table(tab_2) THEN
         raise_application_error(
                                -20000,
                                'Не существует какой-то из таблиц'
         );
     END IF;
 
-    IF NOT check_one_to_many(
-                            parent_tab,
-                            child_tab
-           ) THEN
-        raise_application_error(
-                               -20001,
-                               'Нет связи one-to-many'
-        );
-    END IF;
+    list_tab := check_bind(
+                          tab_1,
+                          tab_2
+                );
+    dbms_utility.comma_to_table(
+                               list   => list_tab,
+                               tablen => l_tablen,
+                               tab    => l_tab
+    );
 
+    parent_tab := trim(l_tab(1));
+    child_tab := trim(l_tab(2));
     table_name := create_unique_name(
                                     parent_tab,
                                     child_tab
@@ -215,10 +256,21 @@ BEGIN
 END;
 /
 
+DECLARE
+    list VARCHAR2(100);
+BEGIN
+    list := check_bind(
+                      'stages',
+                      'buildings'
+            );
+    dbms_output.put_line(list);
+END;
+/
+
 BEGIN
     parent_child_tab(
-                    'teams',
-                    'buildings'
+                    'buildings',
+                    'teams'
     );
 END;
 /
