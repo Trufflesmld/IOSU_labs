@@ -256,17 +256,6 @@ BEGIN
 END;
 /
 
-DECLARE
-    list VARCHAR2(100);
-BEGIN
-    list := check_bind(
-                      'stages',
-                      'buildings'
-            );
-    dbms_output.put_line(list);
-END;
-/
-
 BEGIN
     parent_child_tab(
                     'buildings',
