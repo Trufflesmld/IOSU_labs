@@ -7,12 +7,15 @@
 CREATE OR REPLACE PROCEDURE new_object_bd (
     type_of   IN VARCHAR2,
     ref_tab   IN VARCHAR2,
-    col_list  IN VARCHAR2,
-    rec_count IN INTEGER
+    col_list  IN VARCHAR2 DEFAULT NULL,
+    rec_count IN INTEGER DEFAULT NULL
 ) IS
+
     new_obj_name    VARCHAR2(100);
     select_rec      VARCHAR2(200);
+    columns_str     VARCHAR2(100);
     counter_records INTEGER;
+    number_records  INTEGER;
 BEGIN
     IF upper(type_of) NOT IN ( 'VIEW', 'TABLE' ) THEN
         raise_application_error(
@@ -27,27 +30,39 @@ BEGIN
                                'Таблицы не существует'
         );
     END IF;
-    IF NOT check_exist_column_in_table(
-                                      ref_tab,
-                                      col_list
-           ) THEN
-        raise_application_error(
-                               -20003,
-                               'Не существует столбца'
-        );
+    IF col_list IS NULL THEN
+        columns_str := ' * ';
+    ELSE
+        IF NOT check_exist_column_in_table(
+                                          ref_tab,
+                                          col_list
+               ) THEN
+            raise_application_error(
+                                   -20003,
+                                   'Не существует столбца'
+            );
+        END IF;
+
+        columns_str := col_list;
     END IF;
 
     EXECUTE IMMEDIATE 'SELECT count(1) FROM ' || ref_tab
     INTO counter_records;
-    IF counter_records < rec_count THEN
-        raise_application_error(
-                               -20004,
-                               'У таблицы на данный момент существует '
-                               || counter_records
-                               || ' записей. Указано '
-                               || rec_count
-                               || ' записей'
-        );
+    IF rec_count IS NULL THEN
+        number_records := counter_records;
+    ELSE
+        IF counter_records < rec_count THEN
+            raise_application_error(
+                                   -20004,
+                                   'У таблицы на данный момент существует '
+                                   || counter_records
+                                   || ' записей. Указано '
+                                   || rec_count
+                                   || ' записей'
+            );
+        END IF;
+
+        number_records := rec_count;
     END IF;
 
     new_obj_name := create_unique_name(
@@ -55,11 +70,11 @@ BEGIN
                                       type_of
                     );
     select_rec := 'SELECT '
-                  || col_list
+                  || columns_str
                   || ' FROM '
                   || ref_tab
                   || ' WHERE rownum <= '
-                  || rec_count;
+                  || number_records;
 
     CASE upper(type_of)
         WHEN 'VIEW' THEN
@@ -144,10 +159,8 @@ END;
 
 BEGIN
     new_object_bd(
-                 'table',
-                 'buildings',
-                 'buildkey, typeobj',
-                 3
+                 type_of   => 'table',
+                 ref_tab   => 'buildings'
     );
 END;
 /
