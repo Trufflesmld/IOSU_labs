@@ -221,6 +221,7 @@ EXCEPTION
         );
     WHEN err THEN
         dbms_output.put_line('По этому строительству пока что нет заказов на материалы');
+        RETURN NULL;
 END all_money_of_stage_in_build;
 /
 
@@ -279,6 +280,7 @@ EXCEPTION
         );
     WHEN err THEN
         dbms_output.put_line('По этому строительству пока что нет заказов на материалы');
+        RETURN NULL;
 END all_money_of_build;
 /
 

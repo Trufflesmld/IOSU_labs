@@ -183,7 +183,7 @@ END;
 
 BEGIN
     random_select(
-                 name_tab => 'buildings, teams'
+                 name_tab => 'teams, buildings'
     );
 END;
 /
