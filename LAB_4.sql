@@ -251,6 +251,65 @@ CREATE OR REPLACE PACKAGE BODY pack IS
 
         build_stage curs_build_stage%rowtype;
         err1 EXCEPTION;
+
+        FUNCTION all_money_of_stage_in_build (
+            bk     buildings.buildkey%TYPE,
+            stagek stages.stagekey%TYPE
+        ) RETURN stuf.price_of_stuf%TYPE IS
+
+            allmoney_of_stage stuf.price_of_stuf%TYPE DEFAULT 0;
+            CURSOR curs_stufkey_needed IS
+            SELECT
+                stufkey,
+                neededstuf
+            FROM
+                s_s
+            WHERE
+                s_s.buildkey = bk
+                AND s_s.stagekey = stagek;
+
+            stufkey_needed    curs_stufkey_needed%rowtype;
+            price_stuf        stuf.price_of_stuf%TYPE;
+            name_of_stage     stages.stagename%TYPE;
+            err1 EXCEPTION;
+        BEGIN
+            SELECT
+                stagename
+            INTO name_of_stage
+            FROM
+                stages
+            WHERE
+                stages.stagekey = stagek;
+
+            OPEN curs_stufkey_needed;
+            FETCH curs_stufkey_needed INTO stufkey_needed;
+            IF curs_stufkey_needed%notfound THEN
+                RAISE err1;
+            END IF;
+            LOOP
+                EXIT WHEN curs_stufkey_needed%notfound;
+                SELECT
+                    price_of_stuf
+                INTO price_stuf
+                FROM
+                    stuf
+                WHERE
+                    stuf.stufkey = stufkey_needed.stufkey;
+
+                allmoney_of_stage := allmoney_of_stage + price_stuf * stufkey_needed.neededstuf;
+                FETCH curs_stufkey_needed INTO stufkey_needed;
+            END LOOP;
+
+            RETURN allmoney_of_stage;
+        EXCEPTION
+            WHEN no_data_found THEN
+                dbms_output.put_line('Некорректный этап');
+                RETURN NULL;
+            WHEN err1 THEN
+                dbms_output.put_line('По запрашиваемому этапу строительства нет информации');
+                RETURN NULL;
+        END all_money_of_stage_in_build;
+
     BEGIN
         OPEN curs_build_stage;
         FETCH curs_build_stage INTO build_stage;
