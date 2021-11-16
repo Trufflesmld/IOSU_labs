@@ -59,7 +59,7 @@ BEGIN
         FOR i IN columns_arr.first..columns_arr.last LOOP
             FOR j IN 1..l_tables_tablen LOOP
                 IF columns_arr(i).table_name = upper(trim(l_tables_tab(j))) THEN
-                    columns_str := columns_str
+                    columns_str := columns_str ||columns_arr(i).table_name||'.'
                                    || columns_arr(i).column_name
                                    || ', ';
                 END IF;
@@ -72,7 +72,6 @@ BEGIN
                                tablen => l_cols_tablen,
                                tab    => l_cols_tab
     );
-    columns_str := '*';
     ELSE
         dbms_utility.comma_to_table(
                                    list   => col_list,
@@ -107,6 +106,8 @@ BEGIN
     );
     END IF;
 
+    dbms_output.put_line(columns_str);
+
     
     query_string := 'SELECT '
                     || columns_str
@@ -130,54 +131,54 @@ BEGIN
                     || where_str_close;
     query_string := upper(query_string);
     dbms_output.put_line(query_string);
-    v_cursor_id := dbms_sql.open_cursor;
-    dbms_sql.parse(
-                  v_cursor_id,
-                  query_string,
-                  dbms_sql.native
-    );
-    FOR i IN 1..l_cols_tablen LOOP
-        dbms_sql.define_column(
-                              v_cursor_id,
-                              i,
-                              'a',
-                              20
-        );
-    END LOOP;
+--     v_cursor_id := dbms_sql.open_cursor;
+--     dbms_sql.parse(
+--                   v_cursor_id,
+--                   query_string,
+--                   dbms_sql.native
+--     );
+--     FOR i IN 1..l_cols_tablen LOOP
+--         dbms_sql.define_column(
+--                               v_cursor_id,
+--                               i,
+--                               'a',
+--                               100
+--         );
+--     END LOOP;
 
-    FOR i IN 1..l_cols_tablen LOOP
-        header := header
-                  || ' | '
-                  || trim(l_cols_tab(i));
-    END LOOP;
+--     FOR i IN 1..l_cols_tablen LOOP
+--         header := header
+--                   || ' | '
+--                   || trim(l_cols_tab(i));
+--     END LOOP;
 
-    dbms_output.put_line('Uнформация таблицы ' || name_tab);
-    dbms_output.put_line(header || ' |');
-    l_feedback := dbms_sql.execute(v_cursor_id);
-    LOOP
-        l_one_row_string := '';
-        l_feedback := dbms_sql.fetch_rows(v_cursor_id);
-        EXIT WHEN l_feedback = 0;
-        FOR i IN 1..l_cols_tablen LOOP
-            dbms_sql.column_value(
-                                 v_cursor_id,
-                                 i,
-                                 col_value
-            );
-            col_value := to_char(col_value);
-            l_one_row_string := l_one_row_string
-                                || ' | '
-                                || col_value;
-        END LOOP;
+--     dbms_output.put_line('Uнформация таблицы ' || name_tab);
+--     dbms_output.put_line(header || ' |');
+--     l_feedback := dbms_sql.execute(v_cursor_id);
+--     LOOP
+--         l_one_row_string := '';
+--         l_feedback := dbms_sql.fetch_rows(v_cursor_id);
+--         EXIT WHEN l_feedback = 0;
+--         FOR i IN 1..l_cols_tablen LOOP
+--             dbms_sql.column_value(
+--                                  v_cursor_id,
+--                                  i,
+--                                  col_value
+--             );
+--             col_value := to_char(col_value);
+--             l_one_row_string := l_one_row_string
+--                                 || ' | '
+--                                 || col_value;
+--         END LOOP;
 
-        dbms_output.put_line(l_one_row_string || ' |');
-    END LOOP;
+--         dbms_output.put_line(l_one_row_string || ' |');
+--     END LOOP;
 
-    dbms_sql.close_cursor(v_cursor_id);
-EXCEPTION
-    WHEN OTHERS THEN
-        dbms_sql.close_cursor(v_cursor_id);
-        RAISE;
+--     dbms_sql.close_cursor(v_cursor_id);
+-- EXCEPTION
+--     WHEN OTHERS THEN
+--         dbms_sql.close_cursor(v_cursor_id);
+--         RAISE;
 END;
 /
 
